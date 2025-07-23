@@ -1,0 +1,157 @@
+name: Upload Scan Results to ML Training Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      results_directory:
+        description: 'Directory containing scan results (relative to repo root)'
+        required: true
+        default: 'results'
+      upload_validated:
+        description: 'Also upload validated findings if available'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  upload-results:
+    runs-on: ubuntu-latest
+    environment: production  # Use production environment for AWS secrets
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install boto3
+        
+    - name: Validate scan results directory
+      run: |
+        RESULTS_DIR="${{ github.event.inputs.results_directory }}"
+        
+        if [ ! -d "$RESULTS_DIR" ]; then
+          echo "❌ Results directory not found: $RESULTS_DIR"
+          echo "Available directories:"
+          find . -maxdepth 2 -type d -name "*result*" -o -name "*scan*" | head -10
+          exit 1
+        fi
+        
+        JSON_COUNT=$(find "$RESULTS_DIR" -name "*.json" | wc -l)
+        if [ "$JSON_COUNT" -eq 0 ]; then
+          echo "❌ No JSON files found in $RESULTS_DIR"
+          echo "Available files:"
+          ls -la "$RESULTS_DIR" | head -10
+          exit 1
+        fi
+        
+        echo "✅ Found $JSON_COUNT JSON files in $RESULTS_DIR"
+        echo "Files to upload:"
+        find "$RESULTS_DIR" -name "*.json" | head -5
+        if [ "$JSON_COUNT" -gt 5 ]; then
+          echo "... and $((JSON_COUNT - 5)) more files"
+        fi
+        
+    - name: Upload scan results to S3
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+      run: |
+        cd ml-training/storage
+        
+        # Upload scan results
+        python upload_results.py \
+          --results-dir "../../${{ github.event.inputs.results_directory }}" \
+          --bucket pqswitch-prod-ml-data \
+          --target-prefix "scan-results/$(date +%Y-%m)" \
+          || { echo "❌ Failed to upload scan results"; exit 1; }
+        
+        echo "✅ Successfully uploaded scan results to S3"
+        
+    - name: Upload validated findings (if available)
+      if: github.event.inputs.upload_validated == 'true'
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+      run: |
+        cd ml-training/storage
+        
+        # Look for validated findings files
+        VALIDATED_FILES=$(find ../../ -name "*validated*.json" -o -name "*validation*.json" | head -5)
+        
+        if [ -z "$VALIDATED_FILES" ]; then
+          echo "ℹ️ No validated findings files found"
+          echo "Searched for files matching: *validated*.json, *validation*.json"
+          exit 0
+        fi
+        
+        echo "Found validated findings files:"
+        echo "$VALIDATED_FILES"
+        
+        # Upload each validated file
+        for file in $VALIDATED_FILES; do
+          echo "Uploading validated file: $file"
+          python upload_results.py \
+            --validated-file "$file" \
+            --bucket pqswitch-prod-ml-data \
+            --target-prefix "validated-findings/$(date +%Y-%m)" \
+            || echo "⚠️ Failed to upload $file"
+        done
+        
+        echo "✅ Validated findings upload completed"
+        
+    - name: Generate upload summary
+      run: |
+        echo "## 📊 Upload Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Upload Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        RESULTS_DIR="${{ github.event.inputs.results_directory }}"
+        JSON_COUNT=$(find "$RESULTS_DIR" -name "*.json" | wc -l)
+        TOTAL_SIZE=$(find "$RESULTS_DIR" -name "*.json" -exec ls -l {} \; | awk '{sum += $5} END {print sum}')
+        TOTAL_SIZE_MB=$((TOTAL_SIZE / 1024 / 1024))
+        
+        echo "**Scan Results Uploaded:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Files: $JSON_COUNT" >> $GITHUB_STEP_SUMMARY
+        echo "- Total Size: ${TOTAL_SIZE_MB} MB" >> $GITHUB_STEP_SUMMARY
+        echo "- Source Directory: \`$RESULTS_DIR\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ github.event.inputs.upload_validated }}" == "true" ]; then
+          VALIDATED_COUNT=$(find ../../ -name "*validated*.json" -o -name "*validation*.json" | wc -l)
+          echo "**Validated Findings Uploaded:** $VALIDATED_COUNT files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "**S3 Location:** \`s3://pqswitch-prod-ml-data/scan-results/$(date +%Y-%m)/\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "These results will be used for training ML models to improve PQSwitch accuracy." >> $GITHUB_STEP_SUMMARY
+        
+    - name: List uploaded files in S3
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-west-2
+      run: |
+        cd ml-training/storage
+        
+        echo "📋 Recent uploads to S3:"
+        python download_results.py \
+          --bucket pqswitch-prod-ml-data \
+          --list \
+          || echo "Could not list S3 contents" 

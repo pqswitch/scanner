@@ -1,0 +1,259 @@
+repo_name;repo_url;language;stars;description
+dm-verity;https://github.com/torvalds/linux;C;196988;Linux kernel source tree
+bitcoin;https://github.com/bitcoin/bitcoin;C++;84401;Bitcoin Core integration/staging tree
+ComfyUI;https://github.com/comfyanonymous/ComfyUI;Python;81483;The most powerful and modular diffusion model GUI, api and backend with a graph/nodes interface.
+union;https://github.com/unionlabs/union;Rust;70372;The trust-minimized, zero-knowledge bridging protocol, designed for censorship resistance, extremely high security, and usage in decentralized finance.
+PayloadsAllTheThings;https://github.com/swisskyrepo/PayloadsAllTheThings;Python;67316;A list of useful payloads and bypass for Web Application Security and Pentest/CTF
+ansible;https://github.com/ansible/ansible;Python;65509;Ansible is a radically simple IT automation platform that makes your applications and systems easier to deploy and maintain. Automate everything from code deployment to network configuration to cloud management, in a language that approaches plain English, using SSH, with no agents to install on remote systems. https://docs.ansible.com.
+SecLists;https://github.com/danielmiessler/SecLists;PHP;63904;SecLists is the security tester's companion. It's a collection of multiple types of lists used during security assessments, collected in one place. List types include usernames, passwords, URLs, sensitive data patterns, fuzzing payloads, web shells, and many more.
+ghidra;https://github.com/NationalSecurityAgency/ghidra;Java;58288;Ghidra is a software reverse engineering (SRE) framework
+gatsby;https://github.com/gatsbyjs/gatsby;JavaScript;55899;The best React-based framework with performance, scalability and security built in.
+openpilot;https://github.com/commaai/openpilot;Python;54253;openpilot is an operating system for robotics. Currently, it upgrades the driver assistance system on 300+ supported cars.
+mkcert;https://github.com/FiloSottile/mkcert;Go;54151;A simple zero-config tool to make locally trusted development certificates with any names you'd like.
+go-ethereum;https://github.com/ethereum/go-ethereum;Go;49231;Go implementation of the Ethereum protocol
+serverless;https://github.com/serverless/serverless;JavaScript;46781;‚ö° Serverless Framework ‚Äì Effortlessly build apps that auto-scale, incur zero costs when idle, and require minimal maintenance using AWS Lambda and other managed cloud services.
+terraform;https://github.com/hashicorp/terraform;Go;45507;Terraform enables you to safely and predictably create, change, and improve infrastructure. It is a source-available tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.
+dbeaver;https://github.com/dbeaver/dbeaver;Java;44228;Free universal database tool and SQL client
+airflow;https://github.com/apache/airflow;Python;40847;Apache Airflow - A platform to programmatically author, schedule, and monitor workflows
+freqtrade;https://github.com/freqtrade/freqtrade;Python;40130;Free, open source crypto trading bot
+mitmproxy;https://github.com/mitmproxy/mitmproxy;Python;39715;An interactive TLS-capable intercepting HTTP proxy for penetration testers and software developers.
+pandoc;https://github.com/jgm/pandoc;Haskell;38205;Universal markup converter
+leveldb;https://github.com/google/leveldb;C++;37811;LevelDB is a fast key-value storage library written at Google that provides an ordered mapping from string keys to string values.
+nps;https://github.com/ehang-io/nps;Go;32999;‰∏ÄÊ¨æËΩªÈáèÁ∫ß„ÄÅÈ´òÊÄßËÉΩ„ÄÅÂäüËÉΩÂº∫Â§ßÁöÑÂÜÖÁΩëÁ©øÈÄè‰ª£ÁêÜÊúçÂä°Âô®„ÄÇÊîØÊåÅtcp„ÄÅudp„ÄÅsocks5„ÄÅhttpÁ≠âÂá†‰πéÊâÄÊúâÊµÅÈáèËΩ¨ÂèëÔºåÂèØÁî®Êù•ËÆøÈóÆÂÜÖÁΩëÁΩëÁ´ô„ÄÅÊú¨Âú∞ÊîØ‰ªòÊé•Âè£Ë∞ÉËØï„ÄÅsshËÆøÈóÆ„ÄÅËøúÁ®ãÊ°åÈù¢ÔºåÂÜÖÁΩëdnsËß£Êûê„ÄÅÂÜÖÁΩësocks5‰ª£ÁêÜÁ≠âÁ≠â‚Ä¶‚Ä¶ÔºåÂπ∂Â∏¶ÊúâÂäüËÉΩÂº∫Â§ßÁöÑwebÁÆ°ÁêÜÁ´Ø„ÄÇa lightweight, high-performance, powerful intranet penetration proxy server, with a powerful web management terminal.
+vault;https://github.com/hashicorp/vault;Go;32704;A tool for secrets management, encryption as a service, and privileged access management
+certbot;https://github.com/certbot/certbot;Python;32295;Certbot is EFF's tool to obtain certs from Let's Encrypt and (optionally) auto-enable HTTPS on your server.  It can also act as a client for any other CA that uses the ACME protocol.
+Fabric;https://github.com/danielmiessler/Fabric;JavaScript;32248;Fabric is an open-source framework for augmenting humans using AI. It provides a modular system for solving specific problems using a crowdsourced set of AI prompts that can be used anywhere.
+CyberChef;https://github.com/gchq/CyberChef;JavaScript;31726;The Cyber Swiss Army Knife - a web app for encryption, encoding, compression and data analysis
+comprehensive-rust;https://github.com/google/comprehensive-rust;Rust;30315;This is the Rust course used by the Android team at Google. It provides you the material to quickly teach Rust.
+rocksdb;https://github.com/facebook/rocksdb;C++;30017;A library that provides an embeddable, persistent key-value store for fast storage.
+Xray-core;https://github.com/XTLS/Xray-core;Go;29688;Xray, Penetrates Everything. Also the best v2ray-core. Where the magic happens. An open platform for various uses.
+1Panel;https://github.com/1Panel-dev/1Panel;Go;29458;üî• 1Panel provides an intuitive web interface and MCP Server to manage websites, files, containers, databases, and LLMs on a Linux server.
+consul;https://github.com/hashicorp/consul;Go;29089;Consul is a distributed, highly available, and data center aware solution to connect and configure applications across dynamic, distributed infrastructure.
+tokio;https://github.com/tokio-rs/tokio;Rust;28972;A runtime for writing reliable asynchronous applications with Rust. Provides I/O, networking, scheduling, timers, ...
+SpringAll;https://github.com/wuyouzhuguli/SpringAll;Java;28860;Âæ™Â∫èÊ∏êËøõÔºåÂ≠¶‰π†Spring Boot„ÄÅSpring Boot & Shiro„ÄÅSpring Batch„ÄÅSpring Cloud„ÄÅSpring Cloud Alibaba„ÄÅSpring Security & Spring Security OAuth2ÔºåÂçöÂÆ¢SpringÁ≥ªÂàóÊ∫êÁ†ÅÔºöhttps://mrbird.cc
+spring-cloud-alibaba;https://github.com/alibaba/spring-cloud-alibaba;Java;28567;Spring Cloud Alibaba provides a one-stop solution for application development for the distributed solutions of Alibaba middleware.
+keycloak;https://github.com/keycloak/keycloak;Java;28037;Open Source Identity and Access Management For Modern Applications and Services
+openssl;https://github.com/openssl/openssl;C;27862;TLS/SSL and crypto library
+trivy;https://github.com/aquasecurity/trivy;Go;27339;Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more
+WindTerm;https://github.com/kingToolbox/WindTerm;C;27023;A professional cross-platform SSH/Sftp/Shell/Telnet/Tmux/Serial terminal.
+vagrant;https://github.com/hashicorp/vagrant;Ruby;26754;Vagrant is a tool for building and distributing development environments.
+seaweedfs;https://github.com/seaweedfs/seaweedfs;Go;25009;SeaweedFS is a fast distributed storage system for blobs, objects, files, and data lake, for billions of files! Blob store has O(1) disk seek, cloud tiering. Filer supports Cloud Drive, xDC replication, Kubernetes, POSIX FUSE mount, S3 API, S3 Gateway, Hadoop, WebDAV, encryption, Erasure Coding. Enterprise version is at seaweedfs.com.
+sing-box;https://github.com/SagerNet/sing-box;Go;24737;The universal proxy platform
+solidity;https://github.com/ethereum/solidity;C++;24565;Solidity, the Smart Contract Programming Language
+winget-cli;https://github.com/microsoft/winget-cli;C++;24464;WinGet is the Windows Package Manager. This project includes a CLI (Command Line Interface), PowerShell modules, and a COM (Component Object Model) API (Application Programming Interface).
+authelia;https://github.com/authelia/authelia;Go;24362;The Single Sign-On Multi-Factor portal for web apps, now OpenID Certified‚Ñ¢
+czkawka;https://github.com/qarmin/czkawka;Rust;24333;Multi functional app to find duplicates, empty folders, similar images etc.
+devise;https://github.com/heartcombo/devise;Ruby;24197;Flexible authentication solution for Rails with Warden.
+keepassxc;https://github.com/keepassxreboot/keepassxc;C++;23551;KeePassXC is a cross-platform community-driven port of the Windows application “Keepass Password Safe”.
+hashcat;https://github.com/hashcat/hashcat;C;22939;World's fastest and most advanced password recovery utility
+tinyrenderer;https://github.com/ssloy/tinyrenderer;C++;22150;A brief computer graphics / rendering course
+eladmin;https://github.com/elunez/eladmin;Java;21680;eladmin jpa ÁâàÊú¨ÔºöÈ°πÁõÆÂü∫‰∫é Spring Boot 2.7.18„ÄÅ Jpa„ÄÅ Spring Security„ÄÅRedis„ÄÅVueÁöÑÂâçÂêéÁ´ØÂàÜÁ¶ªÁöÑÂêéÂè∞ÁÆ°ÁêÜÁ≥ªÁªüÔºåÈ°πÁõÆÈááÁî®ÂàÜÊ®°ÂùóÂºÄÂèëÊñπÂºèÔºå ÊùÉÈôêÊéßÂà∂ÈááÁî® RBACÔºåÊîØÊåÅÊï∞ÊçÆÂ≠óÂÖ∏‰∏éÊï∞ÊçÆÊùÉÈôêÁÆ°ÁêÜÔºåÊîØÊåÅ‰∏ÄÈîÆÁîüÊàêÂâçÂêéÁ´Ø‰ª£Á†ÅÔºåÊîØÊåÅÂä®ÊÄÅË∑ØÁî±
+mimikatz;https://github.com/gentilkiwi/mimikatz;C;20428;A little tool to play with Windows security
+shardingsphere;https://github.com/apache/shardingsphere;Java;20329;Empowering Data Intelligence with Distributed SQL for Sharding, Scalability, and Security Across All Databases.
+roslyn;https://github.com/dotnet/roslyn;C#;19658;The Roslyn .NET compiler provides C# and Visual Basic languages with rich code analysis APIs.
+age;https://github.com/FiloSottile/age;Go;19167;A simple, modern and secure encryption tool (and Go library) with small explicit keys, no config options, and UNIX-style composability.
+sops;https://github.com/mozilla/sops;Go;18845;Simple and flexible tool for managing secrets
+cube;https://github.com/cube-js/cube;Rust;18664;üìä Cube‚Äôs universal semantic layer platform is the next evolution of OLAP technology for AI, BI, spreadsheets, and embedded analytics
+universal-android-debloater;https://github.com/0x192/universal-android-debloater;Rust;17261;Cross-platform GUI written in Rust using ADB to debloat non-rooted android devices. Improve your privacy, the security and battery life of your device.
+Bitwarden/Core;https://github.com/bitwarden/server;C#;16790;Bitwarden infrastructure/backend (API, database, Docker, etc).
+blurhash;https://github.com/woltapp/blurhash;C;16479;A very compact representation of a placeholder for an image.
+plaid;https://github.com/nickbutcher/plaid;Kotlin;16246;An Android app which provides design news & inspiration as well as being an example of implementing material design.
+crypto-js;https://github.com/brix/crypto-js;JavaScript;16152;JavaScript library of crypto standards.
+N_m3u8DL-CLI;https://github.com/nilaoda/N_m3u8DL-CLI;C#;15211;[.NET] m3u8 downloader ÂºÄÊ∫êÁöÑÂëΩ‰ª§Ë°åm3u8/HLS/dash‰∏ãËΩΩÂô®ÔºåÊîØÊåÅÊôÆÈÄöAES-128-CBCËß£ÂØÜÔºåÂ§öÁ∫øÁ®ãÔºåËá™ÂÆö‰πâËØ∑Ê±ÇÂ§¥Á≠â. ÊîØÊåÅÁÆÄ‰Ωì‰∏≠Êñá,ÁπÅ‰Ωì‰∏≠ÊñáÂíåËã±Êñá. English Supported.
+dogecoin;https://github.com/dogecoin/dogecoin;C++;15021;very currency
+NekoBoxForAndroid;https://github.com/MatsuriDayo/NekoBoxForAndroid;Kotlin;14808;NekoBox for Android / sing-box / universal proxy toolchain for Android
+ecapture;https://github.com/gojue/ecapture;C;14447;Capturing SSL/TLS plaintext without a CA certificate using eBPF. Supported on Linux/Android kernels for amd64/arm64.
+solana;https://github.com/solana-labs/solana;Rust;14219;Web-Scale Blockchain for fast, secure, scalable, decentralized apps and marketplaces.
+esp8266_deauther;https://github.com/SpacehuhnTech/esp8266_deauther;C;14174;Affordable WiFi hacking platform for testing and learning
+opennhp;https://github.com/OpenNHP/opennhp;C;13631;A lightweight, cryptography-powered, open-source toolkit built to enforce Zero Trust security for infrastructure, applications, and data in the AI-driven world.
+abp;https://github.com/abpframework/abp;C#;13605;Open-source web application framework for ASP.NET Core! Offers an opinionated architecture to build enterprise software solutions with best practices on top of the .NET. Provides the fundamental infrastructure, cross-cutting-concern implementations, startup templates, application modules, UI themes, tooling and documentation.
+tink;https://github.com/tink-crypto/tink;C++;13541;Tink is a multi-language, cross-platform, open source library that provides cryptographic APIs that are secure, easy to use correctly, and hard(er) to misuse.
+duplicati;https://github.com/duplicati/duplicati;C#;12824;Store securely encrypted backups in the cloud!
+wazuh;https://github.com/wazuh/wazuh;C;12821;Wazuh - The Open Source Security Platform. Unified XDR and SIEM protection for endpoints and cloud workloads.
+capistrano;https://github.com/capistrano/capistrano;Ruby;12813;A deployment automation tool built on Ruby, Rake, and SSH.
+libsodium;https://github.com/jedisct1/libsodium;C;12784;A modern, portable, easy to use crypto library.
+uuid;https://github.com/ramsey/uuid;PHP;12551;:snowflake: A PHP library for generating universally unique identifiers (UUIDs).
+scapy;https://github.com/secdev/scapy;Python;11536;Scapy: the Python-based interactive packet manipulation program & library.
+jwt-auth;https://github.com/tymondesigns/jwt-auth;PHP;11412;üîê JSON Web Token Authentication for Laravel & Lumen
+workerman;https://github.com/walkor/workerman;PHP;11412;An asynchronous event driven PHP socket framework. Supports HTTP, Websocket, SSL and other custom protocols. 
+ImageGlass;https://github.com/d2phap/ImageGlass;C#;10661;üèû A lightweight, versatile image viewer
+timber;https://github.com/JakeWharton/timber;Kotlin;10625;A logger with a small, extensible API which provides utility on top of Android's normal Log class.
+ideavim;https://github.com/JetBrains/ideavim;Kotlin;9810;IdeaVim ‚Äì A Vim engine for JetBrains IDEs
+rector;https://github.com/rectorphp/rector;PHP;9759;Instant Upgrades and Automated Refactoring of any PHP 5.3+ code
+chains;https://github.com/ethereum-lists/chains;Kotlin;9745;provides metadata for chains
+UniTask;https://github.com/Cysharp/UniTask;C#;9545;Provides an efficient allocation free async/await integration for Unity.
+guides;https://github.com/thoughtbot/guides;Ruby;9513;A guide for programming in style.
+paramiko;https://github.com/paramiko/paramiko;Python;9425;The leading native Python SSHv2 protocol library.
+wpscan;https://github.com/wpscanteam/wpscan;Ruby;9085;WPScan WordPress security scanner. Written for security professionals and blog maintainers to test the security of their WordPress websites. Contact us via contact@wpscan.com
+cfssl;https://github.com/cloudflare/cfssl;Go;9074;CFSSL: Cloudflare's PKI and TLS toolkit
+php-code-coverage;https://github.com/sebastianbergmann/php-code-coverage;PHP;8901;Library that provides collection, processing, and rendering functionality for PHP code coverage information.
+pundit;https://github.com/varvet/pundit;Ruby;8413;Minimal authorization through OO design and pure Ruby classes
+substrate;https://github.com/paritytech/substrate;Rust;8405;Substrate: The platform for blockchain innovators
+angr;https://github.com/angr/angr;Python;8034;A powerful and user-friendly binary analysis platform!
+Maestro;https://github.com/mobile-dev-inc/Maestro;Kotlin;8023;Painless E2E Automation for Mobile and Web
+omniauth;https://github.com/omniauth/omniauth;Ruby;7983;OmniAuth is a flexible authentication system utilizing Rack middleware.
+veracrypt;https://github.com/veracrypt/VeraCrypt;C;7970;Disk encryption with strong security based on TrueCrypt
+rails_admin;https://github.com/railsadminteam/rails_admin;Ruby;7936;RailsAdmin is a Rails engine that provides an easy-to-use interface for managing your data
+terratest;https://github.com/gruntwork-io/terratest;Go;7706; Terratest is a Go library that makes it easier to write automated tests for your infrastructure code.
+bcrypt-nodejs;https://github.com/kelektiv/node.bcrypt.js;JavaScript;7647;bcrypt for NodeJs
+android;https://github.com/bitwarden/android;Kotlin;7514;Bitwarden mobile apps (Password Manager and Authenticator) for Android.
+sjcl;https://github.com/bitwiseshiftleft/sjcl;JavaScript;7222;Stanford Javascript Crypto Library
+sui;https://github.com/MystenLabs/sui;Rust;7160; Sui, a next-generation smart contract platform with high throughput, low latency, and an asset-oriented programming model powered by the Move programming language
+polkadot;https://github.com/paritytech/polkadot;Rust;7140;Polkadot Node Implementation
+brakeman;https://github.com/presidentbeef/brakeman;Ruby;7120;A static analysis security vulnerability scanner for Ruby on Rails applications
+cryptography;https://github.com/pyca/cryptography;Python;7119;cryptography is a package designed to expose cryptographic primitives and recipes to Python developers.
+quick-crypto;https://github.com/nodejs/undici;JavaScript;6919;An HTTP/1.1 client, written from scratch for Node.js
+rustls;https://github.com/rustls/rustls;Rust;6796;A modern TLS library in Rust
+jsencrypt;https://github.com/travist/jsencrypt;JavaScript;6749;A zero-dependency Javascript library to perform OpenSSL RSA Encryption, Decryption, and Key Generation.
+sqlcipher;https://github.com/sqlcipher/sqlcipher;C;6691;SQLCipher is a standalone fork of SQLite that adds 256 bit AES encryption of database files and other security features.
+cancan;https://github.com/ryanb/cancan;Ruby;6253;Authorization Gem for Ruby on Rails.
+pass;https://github.com/gopasspw/gopass;Go;6208;The slightly more awesome standard unix password manager for teams
+mbedtls;https://github.com/Mbed-TLS/mbedtls;C;5980;An open source, portable, easy to use, readable and flexible TLS library, and reference implementation of the PSA Cryptography API. Releases are on a varying cadence, typically around 3 - 6 months between releases.
+openpgpjs;https://github.com/openpgpjs/openpgpjs;JavaScript;5856;OpenPGP implementation for JavaScript
+blake3;https://github.com/BLAKE3-team/BLAKE3;Rust;5645;the official Rust and C implementations of the BLAKE3 cryptographic hash function
+pyjwt;https://github.com/jpadilla/pyjwt;Python;5410;JSON Web Token implementation in Python
+forge;https://github.com/digitalbazaar/forge;JavaScript;5196;A native implementation of TLS in Javascript and tools to write crypto-based and network-heavy webapps
+crypto++;https://github.com/weidai11/cryptopp;C++;5154;free C++ class library of cryptographic schemes
+passbolt_api;https://github.com/passbolt/passbolt_api;PHP;5138;Passbolt Community Edition (CE) API. The JSON API for the open source password manager for teams!
+libp2p-rust;https://github.com/libp2p/rust-libp2p;Rust;5058;The Rust Implementation of the libp2p networking stack. 
+zcash;https://github.com/zcash/zcash;C++;5027;Zcash - Internet Money
+argon2;https://github.com/P-H-C/phc-winner-argon2;C;5013;The password hash Argon2, winner of PHC 
+rippled;https://github.com/ripple/rippled;C++;4905;Decentralized cryptocurrency blockchain daemon implementing the XRP Ledger protocol in C++
+s2n-tls;https://github.com/aws/s2n-tls;C;4610;An implementation of the TLS/SSL protocols
+tiny-AES128-C;https://github.com/kokke/tiny-AES128-C;C;4595;Small portable AES128/192/256 in C
+litecoin;https://github.com/litecoin-project/litecoin;C++;4488;Litecoin source tree
+apache-shiro;https://github.com/apache/shiro;Java;4384;Apache Shiro
+blockscout;https://github.com/blockscout/blockscout;Elixir;4048;Blockchain explorer for Ethereum based network and a tool for inspecting and analyzing EVM based blockchains. 
+status-mobile;https://github.com/status-im/status-mobile;Clojure;3981;a free (libre) open source, mobile OS for Ethereum
+ring;https://github.com/briansmith/ring;Rust;3957;An experiment.
+gocryptfs;https://github.com/rfjakob/gocryptfs;Go;3933;Encrypted overlay filesystem written in Go
+php-encryption;https://github.com/defuse/php-encryption;PHP;3840;Simple Encryption in PHP.
+cardano-sl;https://github.com/input-output-hk/cardano-sl;Haskell;3768;Cryptographic currency implementing Ouroboros PoS protocol
+TheHive;https://github.com/TheHive-Project/TheHive;Scala;3719;TheHive: a Scalable, Open Source and Free Security Incident Response Platform
+guardian;https://github.com/ueberauth/guardian;Elixir;3484;Elixir Authentication
+openssh-portable;https://github.com/openssh/openssh-portable;C;3421;Portable OpenSSH
+jsrsasign;https://github.com/kjur/jsrsasign;JavaScript;3341;The 'jsrsasign' (RSA-Sign JavaScript Library) is an opensource free cryptography library supporting RSA/RSAPSS/ECDSA/DSA signing/validation, ASN.1, PKCS#1/5/8 private/public key, X.509 certificate, CRL, OCSP, CMS SignedData, TimeStamp, CAdES and JSON Web Signature/Token in pure JavaScript.
+stellar-core;https://github.com/stellar/stellar-core;C++;3216;Reference implementation for the peer-to-peer agent that manages the Stellar network.
+helib;https://github.com/homenc/HElib;C++;3201;HElib is an open-source software library that implements homomorphic encryption. It supports the BGV scheme with bootstrapping and the Approximate Number CKKS scheme. HElib also includes optimizations for efficient homomorphic evaluation, focusing on effective use of ciphertext packing techniques and on the Gentry-Halevi-Smart optimizations.
+cardano-node;https://github.com/IntersectMBO/cardano-node;Haskell;3134;The core component that is used to participate in a Cardano decentralised blockchain.
+crypto;https://github.com/golang/crypto;Go;3127;[mirror] Go supplementary cryptography libraries
+pycryptodome;https://github.com/Legrandin/pycryptodome;Python;3049;A self-contained cryptographic library for Python
+botan;https://github.com/randombit/botan;C++;2965;Cryptography Toolkit
+echidna;https://github.com/crytic/echidna;Haskell;2935;Ethereum smart contract fuzzer
+wolfssl;https://github.com/wolfSSL/wolfssl;C;2547;The wolfSSL library is a small, fast, portable implementation of TLS/SSL for embedded devices to the cloud.  wolfSSL supports up to TLS 1.3 and DTLS 1.3!
+bc-java;https://github.com/bcgit/bc-java;Java;2486;Bouncy Castle Java Distribution (Mirror)
+pac4j;https://github.com/pac4j/pac4j;Java;2479;Security engine for Java (authentication, authorization, multi frameworks): OAuth, CAS, SAML, OpenID Connect, LDAP, JWT...
+sslscan;https://github.com/rbsec/sslscan;C;2479;sslscan tests SSL/TLS enabled services to discover supported cipher suites
+nearcore;https://github.com/near/nearcore;Rust;2462;Reference client for NEAR Protocol
+minisign;https://github.com/jedisct1/minisign;C;2387;A dead simple tool to sign files and verify digital signatures.
+post-quantum-liboqs;https://github.com/open-quantum-safe/liboqs;C;2338;C library for prototyping and experimenting with quantum-resistant cryptography
+cryfs;https://github.com/cryfs/cryfs;C++;2116;Cryptographic filesystem for the cloud
+floki;https://github.com/philss/floki;Elixir;2115;Floki is a simple HTML parser that enables search for nodes using CSS selectors.
+lens;https://github.com/ekmett/lens;Haskell;2059;Lenses, Folds, and Traversals - Join us on web.libera.chat #haskell-lens
+hashes;https://github.com/RustCrypto/hashes;Rust;2058;Collection of cryptographic hash functions written in pure Rust
+boringssl;https://github.com/google/boringssl;C;1961;Mirror of BoringSSL
+bcrypt-ruby;https://github.com/codahale/bcrypt-ruby;Ruby;1952;bcrypt-ruby is a Ruby binding for the OpenBSD bcrypt() password hashing algorithm, allowing you to easily store a secure hash of your users' passwords.
+crypto-algorithms;https://github.com/B-Con/crypto-algorithms;C;1939;Basic implementations of standard cryptography algorithms, like AES and SHA-1.
+tweetnacl-js;https://github.com/dchest/tweetnacl-js;JavaScript;1860;Port of TweetNaCl cryptographic library to JavaScript
+camo;https://github.com/atmos/camo;CoffeeScript;1830;:lock: an http proxy to route images through SSL
+manifold;https://github.com/discord/manifold;Elixir;1803;Fast batch message passing between nodes for Erlang/Elixir.
+ng-token-auth;https://github.com/lynndylanhurley/ng-token-auth;CoffeeScript;1790;Token based authentication module for angular.js.
+sobelow;https://github.com/nccgroup/sobelow;Elixir;1735;Security-focused static analysis for the Phoenix Framework
+dnschain;https://github.com/okTurtles/dnschain;CoffeeScript;1729;A blockchain-based DNS + HTTP server that fixes HTTPS security, and more!
+Midje;https://github.com/marick/Midje;Clojure;1695;Midje provides a migration path from clojure.test to a more flexible, readable, abstract, and gracious style of testing
+libtomcrypt;https://github.com/libtom/libtomcrypt;C;1677;LibTomCrypt is a fairly comprehensive, modular and portable cryptographic toolkit that provides developers with a vast array of well known published block ciphers, one-way hash functions, chaining modes, pseudo-random number generators, public key cryptography and a plethora of other routines.
+ueberauth;https://github.com/ueberauth/ueberauth;Elixir;1676;An Elixir Authentication System for Plug-based Web Applications
+python-jose;https://github.com/mpdavis/python-jose;Python;1644;A JOSE implementation in Python
+pow;https://github.com/pow-auth/pow;Elixir;1641;Robust, modular, and extendable user authentication system
+elixir-ls;https://github.com/elixir-lsp/elixir-ls;Elixir;1630;"A frontend-independent IDE ""smartness"" server for Elixir. Implements the ""Language Server Protocol"" standard and provides debugger support via the ""Debug Adapter Protocol"""
+tezos;https://github.com/tezos/tezos;OCaml;1512;Mirror of the release branches for Tezos, a self-amending cryptographic ledger
+dash;https://github.com/dashpay/dash;C++;1502;Dash - Reinventing Cryptocurrency
+atom-beautify;https://github.com/Glavin001/atom-beautify;CoffeeScript;1494;:mega: Help Wanted - Looking for Maintainer: https://github.com/Glavin001/atom-beautify/issues/2572 | :lipstick: Universal beautification package for Atom editor (:warning: Currently migrating to https://github.com/Unibeautify/ and have very limited bandwidth for Atom-Beautify Issues. Thank you for your patience and understanding :heart: )
+libssh2;https://github.com/libssh2/libssh2;C;1434;the SSH library
+course-plan;https://github.com/haskell-beginners-2022/course-plan;Haskell;1412;üìú Haskell course info, plan, video lectures, slides
+haskell-trainings;https://github.com/google/haskell-trainings;Haskell;1405;Haskell 101 and 102: slides and codelabs
+kaffy;https://github.com/aesmail/kaffy;Elixir;1402;Powerfully simple admin package for phoenix applications
+algorand;https://github.com/algorand/go-algorand;Go;1402;Algorand's official implementation in Go. 
+plutus-pioneer-program;https://github.com/input-output-hk/plutus-pioneer-program;Haskell;1386;This repository hosts the lectures of the Plutus Pioneers Program. This program is a training course that the IOG Education Team provides to recruit and train software developers in Plutus, the native smart contract language for the Cardano ecosystem.
+cascalog;https://github.com/nathanmarz/cascalog;Clojure;1376;Data processing on Hadoop without the hassle.
+hound;https://github.com/HashNuke/hound;Elixir;1374;Elixir library for writing integration tests and browser automation
+bcrypt;https://github.com/pyca/bcrypt;Python;1365;Modern(-ish) password hashing for your software and your servers
+conscrypt;https://github.com/google/conscrypt;Java;1329;Conscrypt is a Java Security Provider that implements parts of the Java Cryptography Extension and Java Secure Socket Extension.
+comeonin;https://github.com/riverrun/comeonin;Elixir;1314;Password hashing specification for the Elixir programming language
+aeson;https://github.com/haskell/aeson;Haskell;1280;A fast Haskell JSON library
+datalevin;https://github.com/juji-io/datalevin;Clojure;1272;A simple, fast and versatile Datalog database
+coherence;https://github.com/smpallen99/coherence;Elixir;1264;Coherence is a full featured, configurable authentication system for Phoenix
+s2n-quic;https://github.com/aws/s2n-quic;Rust;1254;An implementation of the IETF QUIC protocol
+mondrian;https://github.com/artursapek/mondrian;CoffeeScript;1241;Web-based vector graphics editor
+hitchhiker-tree;https://github.com/datacrypt-project/hitchhiker-tree;Clojure;1197;Functional, persistent, off-heap, high performance data structure
+cryptol;https://github.com/GaloisInc/cryptol;Haskell;1165;Cryptol: The Language of Cryptography
+friend;https://github.com/cemerick/friend;Clojure;1151;An extensible authentication and authorization library for Clojure Ring web applications and services. 
+pynacl;https://github.com/pyca/pynacl;Python;1135;Python binding to the Networking and Cryptography (NaCl) library
+keyczar;https://github.com/google/keyczar;Java;1092;Easy-to-use crypto toolkit
+bulletproofs;https://github.com/dalek-cryptography/bulletproofs;Rust;1092; A pure-Rust implementation of Bulletproofs using Ristretto.
+libsodium.js;https://github.com/jedisct1/libsodium.js;JavaScript;1050;libsodium compiled to Webassembly and pure JavaScript, with convenient wrappers.
+curve25519-dalek;https://github.com/dalek-cryptography/curve25519-dalek;Rust;998;A pure-Rust implementation of group operations on Ristretto and Curve25519
+rbnacl;https://github.com/RubyCrypto/rbnacl;Ruby;983;Ruby FFI binding to the Networking and Cryptography (NaCl) library (a.k.a. libsodium)
+yubikey-manager;https://github.com/Yubico/yubikey-manager;Python;961;Python library and command line tool for configuring any YubiKey over all USB interfaces.
+pyopenssl;https://github.com/pyca/pyopenssl;Python;914;A Python wrapper around the OpenSSL library
+zexe;https://github.com/scipr-lab/zexe;Rust;869;Interfaces for Relations and SNARKs for these relations
+noble-secp256k1;https://github.com/paulmillr/noble-secp256k1;JavaScript;816;Fastest 4KB JS implementation of secp256k1 signatures and ECDH
+aes-gcm;https://github.com/RustCrypto/AEADs;Rust;811;Authenticated Encryption with Associated Data Algorithms: high-level encryption ciphers
+noble-curves;https://github.com/paulmillr/noble-curves;JavaScript;792;Audited & minimal JS implementation of elliptic curve cryptography.
+password-hashes;https://github.com/RustCrypto/password-hashes;Rust;770;Password hashing functions / KDFs
+elliptic-curves;https://github.com/RustCrypto/elliptic-curves;Rust;765;Collection of pure Rust elliptic curve implementations: NIST P-224, P-256, P-384, P-521, secp256k1, SM2
+arkworks;https://github.com/arkworks-rs/algebra;Rust;752;Libraries for finite field, elliptic curve, and polynomial arithmetic
+pqclean;https://github.com/PQClean/PQClean;C;727;Clean, portable, tested implementations of post-quantum cryptography
+block-ciphers;https://github.com/RustCrypto/block-ciphers;Rust;719;Collection of block cipher algorithms written in pure Rust
+age-plugin-yubikey;https://github.com/str4d/age-plugin-yubikey;Rust;709;YubiKey plugin for age
+ed25519-dalek;https://github.com/dalek-cryptography/ed25519-dalek;Rust;705;Fast and efficient ed25519 signing and verification in Rust.
+noble-hashes;https://github.com/paulmillr/noble-hashes;JavaScript;698;Audited & minimal JS implementation of hash functions, MACs and KDFs.
+orion;https://github.com/orion-rs/orion;Rust;683;Usable, easy and safe pure-Rust crypto
+kyber;https://github.com/dedis/kyber;Go;670;Advanced crypto library for the Go language
+asmcrypto.js;https://github.com/asmcrypto/asmcrypto.js;JavaScript;662;JavaScript Cryptographic Library with performance in mind.
+monocypher;https://github.com/LoupVaillant/Monocypher;C;651;An easy to use, easy to deploy crypto library
+sodiumoxide;https://github.com/sodiumoxide/sodiumoxide;Rust;644;[DEPRECATED] Sodium Oxide: Fast cryptographic library for Rust (bindings to libsodium)
+argon2-cffi;https://github.com/hynek/argon2-cffi;Python;617;Secure Password Hashes for Python
+ursa;https://github.com/quartzjer/ursa;JavaScript;617;URSA - RSA public/private key OpenSSL bindings for Node.js
+XKCP;https://github.com/XKCP/XKCP;C;613;eXtended Keccak Code Package
+rsa;https://github.com/RustCrypto/RSA;Rust;608;RSA implementation in pure Rust
+SecurityDriven.Inferno;https://github.com/sdrapkin/SecurityDriven.Inferno;C#;583;:white_check_mark: .NET crypto done right. Professionally audited.
+nacl-go;https://github.com/kevinburke/nacl;Go;547;Pure Go implementation of the NaCL set of API's
+signatures;https://github.com/RustCrypto/signatures;Rust;538;Cryptographic signature algorithms: DSA, ECDSA, Ed25519
+openssl-go;https://github.com/spacemonkeygo/openssl;Go;481;OpenSSL bindings for Go
+noble-ed25519;https://github.com/paulmillr/noble-ed25519;JavaScript;459;Fastest 4KB JS implementation of ed25519 signatures
+noise-protocol;https://github.com/trevp/noise;C;455;Noise Specification
+openssl-quictls;https://github.com/quictls/openssl;C;410;TLS/SSL and crypto library with QUIC APIs
+argon2-browser;https://github.com/antelle/argon2-browser;JavaScript;409;Argon2 library compiled for browser runtime
+secp256k1;https://github.com/rust-bitcoin/rust-secp256k1;Rust;382;Rust language bindings for Bitcoin secp256k1 library.
+bls12_381;https://github.com/zkcrypto/bls12_381;Rust;342;Implementation of the BLS12-381 pairing-friendly elliptic curve group
+x25519-dalek;https://github.com/dalek-cryptography/x25519-dalek;Rust;338;X25519 elliptic curve Diffie-Hellman key exchange in pure-Rust, using curve25519-dalek.
+yubico/yubico-piv-tool;https://github.com/Yubico/yubico-piv-tool;C;329;Command line tool for the YubiKey PIV application
+schnorrkel;https://github.com/w3f/schnorrkel;Rust;329;Schnorr VRFs and signatures on the Ristretto group
+KeePass;https://github.com/dlech/KeePass2.x;C#;313;unofficial mirror of KeePass2.x source code
+poly1305;https://github.com/RustCrypto/MACs;Rust;294;Message authentication code algorithms written in pure Rust
+polycrypt;https://github.com/polycrypt/polycrypt;JavaScript;267;PolyCrypt - A pure JS implementation of the WebCrypto API
+tlslite-ng;https://github.com/tomato42/tlslite-ng;Python;251;TLS implementation in pure python, focused on interoperability testing
+openssl-ruby;https://github.com/ruby/openssl;Ruby;246;Provides SSL, TLS and general purpose cryptography.
+cryptonite;https://github.com/haskell-crypto/cryptonite;Haskell;226;lowlevel set of cryptographic primitives for haskell
+pandect;https://github.com/xsc/pandect;Clojure;220;Fast and easy-to-use Message Digest, Checksum and HMAC library for Clojure | Migrated to codeberg
+storm-encrypt;https://github.com/input-output-hk/scrypto;Scala;205;Cryptographic primitives for Scala
+tink-java;https://github.com/tink-crypto/tink-java;Java;188;Java implementation of Tink
+ex_crypto;https://github.com/ntrepid8/ex_crypto;Elixir;156;Wrapper around the Erlang crypto module for Elixir.
+buddy-core;https://github.com/funcool/buddy-core;Clojure;150;Cryptographic api for Clojure
+gnutls;https://github.com/gnutls/gnutls;C;136;Mirror of official gnutls repository
+merlin;https://github.com/dalek-cryptography/merlin;Rust;128;Composable proof transcripts for public-coin arguments of knowledge
+gpgme;https://github.com/gpg/gpgme;C;123;GnuPG Made Easy. NOTE: Maintainers are not tracking this mirror. Do not make pull requests here, nor comment any commits, submit them usual way to bug tracker (https://www.gnupg.org/documentation/bts.html) or to the mailing list (https://www.gnupg.org/documentation/mailing-lists.html).
+libscrypt;https://github.com/technion/libscrypt;C;121;A shared library that implements scrypt() functionality - a replacement for bcrypt()
+dkeyczar;https://github.com/dgryski/dkeyczar;Go;112;Port of Google's Keyczar cryptography library to Go
+mongo-crypto;https://github.com/mongodb/libmongocrypt;C;102;Required C library for Client Side and Queryable Encryption in MongoDB
+Crypto3;https://github.com/NilFoundation/crypto3;C++;84;Modern Cryptography Suite in C++17
+buddy-hashers;https://github.com/funcool/buddy-hashers;Clojure;75;Collection of password hashers.
+nettle;https://github.com/gnutls/nettle;C;68;A mirror of the nettle repository
+apache/incubator-milagro-crypto-c;https://github.com/apache/incubator-milagro-crypto-c;C;36;Apache milagro (Incubating)
+polyval;https://github.com/RustCrypto/universal-hashes;Rust;30;Collection of universal hashing functions
+clj-crypto;https://github.com/macourtney/clj-crypto;Clojure;29;Clj-crypto is a wrapper for Bouncy Castle which allows you to easily use cryptography in your clojure app.
+HsOpenSSL;https://github.com/vshabanov/HsOpenSSL;Haskell;24;OpenSSL binding for Haskell
+libgpg-error;https://github.com/gpg/libgpg-error;C;21;Error codes used by GnuPG et al. NOTE: Maintainers are not tracking this mirror. Do not make pull requests here, nor comment any commits, submit them usual way to bug tracker (https://www.gnupg.org/documentation/bts.html) or to the mailing list (https://www.gnupg.org/documentation/mailing-lists.html).
+scrypt-haskell;https://github.com/informatikr/scrypt;Haskell;18;Haskell bindings to Colin Percival's scrypt implementation.
+age-encryption;https://github.com/str4d/age;Rust;0;A simple, modern and secure encryption tool with small explicit keys, no config options, and UNIX-style composability.

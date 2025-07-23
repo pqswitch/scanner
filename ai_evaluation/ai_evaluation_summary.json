@@ -1,0 +1,15 @@
+{
+  "total_findings": 100,
+  "valid_findings": 90,
+  "false_positives": 10,
+  "total_tokens_used": 21706,
+  "total_cost": 0.0073517999999999995,
+  "average_confidence": 0.8405000000000006,
+  "processing_time": "2m49.788273458s",
+  "recommended_actions": [
+    "Review 90 critical/high priority findings immediately",
+    "Consider filtering out 10 false positives",
+    "Focus on quantum-vulnerable algorithms (RSA, ECDSA, ECDH) for migration planning",
+    "Replace cryptographically broken algorithms (MD5, SHA-1, DES) immediately"
+  ]
+}

@@ -1,0 +1,15 @@
+# Exclude cloned repositories from Cursor search
+# These contain large amounts of external code that should not be searched
+
+# ML training repositories
+ml-training/repos/
+ml-training/repos/*
+
+# Test repositories
+repo_test/repos/
+repo_test/repos/*
+
+# Any other large external code directories
+**/vendor/
+**/node_modules/
+**/.git/ 

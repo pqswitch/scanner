@@ -1,0 +1,41 @@
+# Crypto configuration options for embedded system
+# Expected: INFO severity - "TLS configuration option detected in build system"
+# Expected: INFO severity - "TLS cipher suite configuration detected"
+
+config CRYPTO_TLS_SUPPORT
+	bool "TLS support"
+	help
+	  Enable TLS support for secure communications
+
+config CRYPTO_CIPHER_SUITES
+	bool "Cipher suite configuration"
+	depends on CRYPTO_TLS_SUPPORT
+	help
+	  Configure available cipher suites including:
+	  - DHE-RSA based ciphers
+	  - ECDHE-RSA based ciphers
+
+config MBEDTLS_KEY_EXCHANGE_DHE_RSA_ENABLED
+	bool "DHE-RSA based ciphersuite modes"
+	depends on MBEDTLS_PKCS1_V15
+
+config MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+	bool "ECDHE-RSA based ciphersuite modes"
+	depends on MBEDTLS_PKCS1_V21
+
+config MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+	bool "ECDHE-ECDSA based ciphersuite modes"
+	depends on MBEDTLS_ECP_C
+
+config SSL_PROTOCOL_VERSIONS
+	bool "SSL/TLS protocol versions"
+	help
+	  Support for various SSL/TLS versions:
+	  TLSv1_0, TLSv1_1, TLSv1_2, SSLv3
+
+config CIPHER_SUITE_SELECTION
+	bool "Cipher suite selection"
+	help
+	  Cipher suites to enable:
+	  - KEY_EXCHANGE_DHE_RSA_ENABLED
+	  - CIPHER_ECDHE_ECDSA_ENABLED 

@@ -1,0 +1,42 @@
+scanner:
+  max_file_size: 10485760  # 10MB
+  parallel: 4
+  enable_ast: false  # Disable AST parsing to avoid tree-sitter crashes
+  ignore_patterns:
+    - "vendor/*"
+    - "node_modules/*"
+    - "*.test.go"
+    - ".git/*"
+    - "internal/scanner/rules/*"
+    - "internal/scanner/enhanced_rules.yaml"
+    - "**/rules/*.yaml"
+    - "**/rules/*.yml"
+    - "*.rules.yaml"
+    - "*.rules.yml"
+    - "**/scanner/rules/*"
+    - "**/*scanner*/**/*.yaml"
+    - "**/*scanner*/**/*.yml"
+    # Package management lock files (contain dependency metadata, not source code)
+    - "package-lock.json"
+    - "pnpm-lock.yaml"
+    - "yarn.lock"
+    - "Cargo.lock"
+    - "Pipfile.lock"
+    - "poetry.lock"
+    - "go.sum"
+    - "composer.lock"
+    - "Gemfile.lock"
+
+rules:
+  enabled_rules: []  # Empty = all rules enabled
+  disabled_rules:
+    - "weak-hash-md5"  # Example: disable specific rule
+
+output:
+  default_format: "json"
+  include_source: true
+  verbose: false
+
+patch:
+  templates_path: "custom/templates"
+  default_engine: "cue"

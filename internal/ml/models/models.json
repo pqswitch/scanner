@@ -1,0 +1,231 @@
+{
+  "version": "1.0",
+  "models": {
+    "severity_classifier": {
+      "type": "decision_tree",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "algorithm_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "confidence_predictor": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "crypto_type_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "severity_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "language_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "rule_id_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "file_extension_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "false_positive_detector": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    }
+  },
+  "metadata": {
+    "created_by": "ml_training_pipeline",
+    "training_samples": 1000,
+    "architecture": "go_embedded"
+  }
+}

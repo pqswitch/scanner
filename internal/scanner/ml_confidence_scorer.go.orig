@@ -1,0 +1,874 @@
+package scanner
+
+import (
+	"fmt"
+	"math"
+	"strings"
+	"time"
+
+	"github.com/pqswitch/scanner/internal/config"
+	"github.com/pqswitch/scanner/internal/types"
+)
+
+// MLConfidenceScorer implements ML-based confidence scoring and ranking
+type MLConfidenceScorer struct {
+	config              *config.Config
+	contextFeatures     map[string]ContextFeature
+	algorithmWeights    map[string]float64
+	severityMultipliers map[string]float64
+	libraryScores       map[string]float64
+	modelCache          map[string]MLPrediction
+	// Add library analysis mode
+	libraryAnalysisMode bool
+	currentLibraryName  string
+}
+
+// ContextFeature represents features used for ML confidence scoring
+type ContextFeature struct {
+	Name        string
+	Weight      float64
+	Description string
+	Extractor   func(string, *FileContext) float64
+}
+
+// MLPrediction represents a machine learning prediction
+type MLPrediction struct {
+	Confidence   float64
+	Features     map[string]float64
+	Prediction   string
+	ModelVersion string
+	Timestamp    time.Time
+}
+
+// NewMLConfidenceScorer creates a new ML confidence scorer
+func NewMLConfidenceScorer(cfg *config.Config) *MLConfidenceScorer {
+	scorer := &MLConfidenceScorer{
+		config:              cfg,
+		contextFeatures:     make(map[string]ContextFeature),
+		algorithmWeights:    make(map[string]float64),
+		severityMultipliers: make(map[string]float64),
+		libraryScores:       make(map[string]float64),
+		modelCache:          make(map[string]MLPrediction),
+		libraryAnalysisMode: false,
+		currentLibraryName:  "",
+	}
+
+	scorer.initializeMLFeatures()
+	return scorer
+}
+
+// SetLibraryAnalysisMode configures the scorer for crypto library analysis
+func (ml *MLConfidenceScorer) SetLibraryAnalysisMode(enabled bool, libraryName string) {
+	ml.libraryAnalysisMode = enabled
+	ml.currentLibraryName = libraryName
+}
+
+// initializeMLFeatures sets up ML features and weights
+func (ml *MLConfidenceScorer) initializeMLFeatures() {
+	// Context features for ML scoring
+	features := map[string]ContextFeature{
+		"function_call_context": {
+			Name:        "function_call_context",
+			Weight:      0.3,
+			Description: "Confidence boost for function call context",
+			Extractor:   ml.extractFunctionCallFeature,
+		},
+		"crypto_library_context": {
+			Name:        "crypto_library_context",
+			Weight:      0.35, // Increased weight for crypto library context
+			Description: "Confidence boost for known crypto library usage or implementation",
+			Extractor:   ml.extractCryptoLibraryFeature,
+		},
+		"library_implementation_context": {
+			Name:        "library_implementation_context",
+			Weight:      0.4, // New feature for library implementation detection
+			Description: "Confidence boost for crypto library implementation patterns",
+			Extractor:   ml.extractLibraryImplementationFeature,
+		},
+		"variable_assignment": {
+			Name:        "variable_assignment",
+			Weight:      0.2,
+			Description: "Confidence boost for variable assignment patterns",
+			Extractor:   ml.extractVariableAssignmentFeature,
+		},
+		"import_context": {
+			Name:        "import_context",
+			Weight:      0.15,
+			Description: "Confidence boost for import/include context",
+			Extractor:   ml.extractImportContextFeature,
+		},
+		"comment_proximity": {
+			Name:        "comment_proximity",
+			Weight:      -0.2,
+			Description: "Confidence penalty for comment proximity",
+			Extractor:   ml.extractCommentProximityFeature,
+		},
+		"test_file_context": {
+			Name:        "test_file_context",
+			Weight:      -0.15,
+			Description: "Confidence penalty for test file context",
+			Extractor:   ml.extractTestFileFeature,
+		},
+		"vendor_code_context": {
+			Name:        "vendor_code_context",
+			Weight:      ml.getVendorCodeWeight(), // Dynamic weight based on analysis mode
+			Description: "Contextual adjustment for vendor/third-party code analysis",
+			Extractor:   ml.extractVendorCodeFeature,
+		},
+	}
+
+	// Algorithm-specific weights (based on cryptographic strength and PQ relevance)
+	algorithmWeights := map[string]float64{
+		"MD5":       1.0, // Broken - highest confidence
+		"SHA1":      0.9, // Deprecated - high confidence
+		"RSA":       0.8, // Quantum vulnerable - high confidence for PQ migration
+		"ECDSA":     0.8, // Quantum vulnerable - high confidence for PQ migration
+		"ECDH":      0.8, // Quantum vulnerable - high confidence for PQ migration
+		"DES":       1.0, // Broken - highest confidence
+		"RC4":       1.0, // Broken - highest confidence
+		"AES128":    0.6, // Still secure but lower priority
+		"AES256":    0.5, // Secure - lowest priority for current crypto
+		"SHA256":    0.5, // Secure - lowest priority
+		"SHA3":      0.3, // Modern - very low priority
+		"KYBER":     0.1, // Post-quantum - information only
+		"DILITHIUM": 0.1, // Post-quantum - information only
+		"UNKNOWN":   0.4, // Medium confidence for unknown algorithms
+	}
+
+	// Severity multipliers
+	severityMultipliers := map[string]float64{
+		"critical": 1.2, // Increased from 1.0
+		"high":     1.0, // Increased from 0.8
+		"medium":   0.8, // Increased from 0.6
+		"low":      0.6, // Increased from 0.4
+		"info":     0.4, // Increased from 0.2
+	}
+
+	// Library reputation scores (higher = more likely to be real crypto usage/implementation)
+	libraryScores := map[string]float64{
+		"openssl":       1.0,
+		"boringssl":     1.0,
+		"botan":         1.0, // Added Botan
+		"crypto":        0.9, // Node.js crypto, Go crypto
+		"cryptopp":      0.9,
+		"libsodium":     0.9,
+		"hashlib":       0.8, // Python hashlib
+		"java.security": 0.8,
+		"bcrypt":        0.8,
+		"scrypt":        0.7,
+		"argon2":        0.7,
+		"uuid":          0.3, // Often false positive
+		"testing":       0.2, // Test libraries
+		"mock":          0.1, // Mock libraries
+	}
+
+	// Store all configurations
+	ml.contextFeatures = features
+	ml.algorithmWeights = algorithmWeights
+	ml.severityMultipliers = severityMultipliers
+	ml.libraryScores = libraryScores
+}
+
+// ScoreFindings applies ML-based confidence scoring to findings
+func (ml *MLConfidenceScorer) ScoreFindings(findings []types.Finding, fileCtx *FileContext) []types.Finding {
+	var scoredFindings []types.Finding
+
+	for _, finding := range findings {
+		// Calculate ML confidence score
+		mlScore := ml.calculateMLConfidence(finding, fileCtx)
+
+		// Enhance finding with ML metadata
+		enhancedFinding := ml.enhanceFindingWithMLData(finding, mlScore, fileCtx)
+
+		scoredFindings = append(scoredFindings, enhancedFinding)
+	}
+
+	// Sort findings by confidence score (highest first)
+	scoredFindings = ml.sortFindingsByConfidence(scoredFindings)
+
+	return scoredFindings
+}
+
+// calculateMLConfidence calculates ML-based confidence score
+func (ml *MLConfidenceScorer) calculateMLConfidence(finding types.Finding, fileCtx *FileContext) MLPrediction {
+	features := make(map[string]float64)
+
+	// Extract context features
+	for featureName, feature := range ml.contextFeatures {
+		featureValue := feature.Extractor(finding.Context, fileCtx)
+		features[featureName] = featureValue
+	}
+
+	// Calculate base confidence from features
+	baseConfidence := 0.5 // Start with neutral confidence
+
+	for featureName, featureValue := range features {
+		if feature, exists := ml.contextFeatures[featureName]; exists {
+			baseConfidence += featureValue * feature.Weight
+		}
+	}
+
+	// Apply algorithm-specific weights
+	if algorithmWeight, exists := ml.algorithmWeights[finding.Algorithm]; exists {
+		baseConfidence *= algorithmWeight
+	}
+
+	// Apply severity multipliers
+	if severityMultiplier, exists := ml.severityMultipliers[finding.Severity]; exists {
+		baseConfidence *= severityMultiplier
+	}
+
+	// Apply library reputation scoring
+	libraryScore := ml.detectLibraryReputation(finding.Context, fileCtx)
+	baseConfidence *= libraryScore
+
+	// Apply stage-specific confidence boosts
+	stageBoost := ml.calculateStageConfidenceBoost(finding)
+	baseConfidence += stageBoost
+
+	// Normalize confidence to [0.0, 1.0]
+	finalConfidence := math.Max(0.0, math.Min(1.0, baseConfidence))
+
+	return MLPrediction{
+		Confidence:   finalConfidence,
+		Features:     features,
+		Prediction:   ml.determinePredictionCategory(finalConfidence),
+		ModelVersion: "v1.0.0",
+		Timestamp:    time.Now(),
+	}
+}
+
+// Feature extraction functions
+
+func (ml *MLConfidenceScorer) extractFunctionCallFeature(context string, fileCtx *FileContext) float64 {
+	// Look for function call patterns
+	if strings.Contains(context, "(") && strings.Contains(context, ")") {
+		// Check for specific crypto function patterns
+		cryptoFunctions := []string{
+			"GenerateKey", "generateKey", "createHash", "getInstance",
+			"New(", "Create(", "Generate(", "Hash(", "Encrypt(",
+
+			// JavaScript/Node.js crypto function patterns
+			"crypto.createHash", "crypto.createCipher", "crypto.createDecipher",
+			"crypto.createSign", "crypto.createVerify", "crypto.createHmac",
+			"crypto.generateKeyPair", "crypto.pbkdf2", "crypto.scrypt",
+			"crypto.randomBytes", "crypto.timingSafeEqual",
+			"createCipheriv", "createDecipheriv", "publicEncrypt", "privateDecrypt",
+			"createECDH", "createDiffieHellman", "subtle.digest", "subtle.encrypt",
+			"subtle.decrypt", "subtle.sign", "subtle.verify", "subtle.generateKey",
+			"require(", "import ", "internalBinding", "jobPromise",
+			"new Hash(", "new Hmac(", "new RSACipherJob(", "new AESCipherJob(",
+			"asyncDigest", "rsaKeyGenerate", "aesCipher", "eddsaSignVerify",
+		}
+
+		for _, fn := range cryptoFunctions {
+			if strings.Contains(context, fn) {
+				return 1.0 // Strong function call pattern
+			}
+		}
+		return 0.7 // Generic function call pattern
+	}
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractCryptoLibraryFeature(context string, fileCtx *FileContext) float64 {
+	// In library analysis mode, give high confidence to crypto library implementation
+	if ml.libraryAnalysisMode {
+		return 1.0 // Always high confidence when analyzing crypto libraries directly
+	}
+
+	// Original logic for application usage detection
+	cryptoLibraries := []string{
+		"crypto", "openssl", "boringssl", "libsodium", "nacl",
+		"cryptopp", "bouncycastle", "hashlib", "java.security",
+		"botan", // Added Botan
+
+		// JavaScript/Node.js crypto libraries and patterns
+		"nodejs", "node", "internal/crypto", "webcrypto", "subtle",
+		"cryptojs", "forge", "jsrsasign", "elliptic", "hash.js",
+		"crypto-browserify", "crypto-js", "node-forge", "bcryptjs",
+		"scryptjs", "argon2", "pbkdf2", "tweetnacl", "sodium",
+	}
+
+	contextLower := strings.ToLower(context)
+	for _, lib := range cryptoLibraries {
+		if strings.Contains(contextLower, lib) {
+			return 1.0
+		}
+	}
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractVariableAssignmentFeature(context string, fileCtx *FileContext) float64 {
+	// Look for variable assignment patterns
+	assignmentPatterns := []string{"=", ":=", "var ", "let ", "const "}
+
+	for _, pattern := range assignmentPatterns {
+		if strings.Contains(context, pattern) {
+			return 0.8
+		}
+	}
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractImportContextFeature(context string, fileCtx *FileContext) float64 {
+	importPatterns := []string{
+		"import", "include", "require", "#include", "from", "use",
+	}
+
+	contextLower := strings.ToLower(context)
+	for _, pattern := range importPatterns {
+		if strings.Contains(contextLower, pattern) {
+			return 0.9
+		}
+	}
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractCommentProximityFeature(context string, fileCtx *FileContext) float64 {
+	// Penalize findings near comments
+	commentPatterns := []string{"//", "/*", "*/", "#", "<!--"}
+
+	for _, pattern := range commentPatterns {
+		if strings.Contains(context, pattern) {
+			return 1.0 // Full penalty
+		}
+	}
+
+	// Check for documentation-like words
+	docWords := []string{"todo", "fixme", "note", "example", "test", "demo"}
+	contextLower := strings.ToLower(context)
+	for _, word := range docWords {
+		if strings.Contains(contextLower, word) {
+			return 0.5 // Partial penalty
+		}
+	}
+
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractTestFileFeature(context string, fileCtx *FileContext) float64 {
+	// Check if this is in a test file
+	if fileCtx.IsTest {
+		return 1.0
+	}
+
+	// Check for test-related patterns in context, but be more sophisticated
+	contextLower := strings.ToLower(context)
+
+	// Strong test indicators - these are definitely test code
+	strongTestPatterns := []string{
+		"assert", "expect", "should", "describe", "it(", "test(",
+		"mock", "fixture", "setup", "teardown", "beforeeach", "aftereach",
+		"unittest", "testcase", "jest", "mocha", "jasmine", "phpunit",
+	}
+
+	for _, pattern := range strongTestPatterns {
+		if strings.Contains(contextLower, pattern) {
+			return 0.8 // High penalty for definite test code
+		}
+	}
+
+	// Weak test indicators - might be crypto implementations with "test" in name
+	// Only penalize if multiple weak indicators are present
+	weakTestPatterns := []string{"test", "spec", "demo", "example"}
+	weakMatches := 0
+
+	for _, pattern := range weakTestPatterns {
+		if strings.Contains(contextLower, pattern) {
+			weakMatches++
+		}
+	}
+
+	// Only penalize if multiple weak indicators or if context suggests it's actually test code
+	if weakMatches >= 2 {
+		return 0.4 // Moderate penalty
+	} else if weakMatches == 1 {
+		// Check if it's actually a crypto implementation that happens to have "test" in name
+		cryptoImplementationPatterns := []string{
+			"_init", "_final", "_update", "_transform", "_encrypt", "_decrypt",
+			"_keygen", "_sign", "_verify", "_ctx", "_setup", "_hash",
+			"struct", "typedef", "algorithm", "cipher", "digest",
+		}
+
+		for _, pattern := range cryptoImplementationPatterns {
+			if strings.Contains(contextLower, pattern) {
+				return 0.0 // No penalty - this is likely a crypto implementation
+			}
+		}
+
+		return 0.2 // Light penalty for single weak indicator
+	}
+
+	return 0.0
+}
+
+func (ml *MLConfidenceScorer) extractVendorCodeFeature(context string, fileCtx *FileContext) float64 {
+	// In library analysis mode, being in vendor/library code is actually a positive signal
+	if ml.libraryAnalysisMode {
+		// Check if we're in crypto library source code
+		if fileCtx.IsVendored {
+			return 1.0 // High confidence - we expect to find crypto in crypto libraries
+		}
+
+		// Check for crypto library directory patterns
+		contextLower := strings.ToLower(context)
+		libraryPatterns := []string{
+			"botan", "openssl", "libsodium", "cryptopp", "mbedtls",
+			"src/lib", "include/", "lib/", "crypto/", "crypt/",
+			"algorithm", "cipher", "digest", "hash", "signature",
+		}
+
+		for _, pattern := range libraryPatterns {
+			if strings.Contains(contextLower, pattern) {
+				return 0.8 // Good confidence - looks like crypto library code
+			}
+		}
+
+		return 0.0 // Neutral in library analysis mode
+	}
+
+	// Original logic for application analysis - penalize vendor code
+	if fileCtx.IsVendored {
+		return 1.0 // Apply penalty for vendor code in application analysis
+	}
+
+	// Check for vendor-like patterns
+	vendorPatterns := []string{
+		"vendor", "third_party", "external", "lib", "node_modules",
+		"generated", "auto-generated", "do not edit",
+	}
+
+	contextLower := strings.ToLower(context)
+	for _, pattern := range vendorPatterns {
+		if strings.Contains(contextLower, pattern) {
+			return 0.8 // Apply penalty for vendor-like patterns
+		}
+	}
+
+	return 0.0 // No vendor code detected
+}
+
+// Helper functions
+
+func (ml *MLConfidenceScorer) detectLibraryReputation(context string, fileCtx *FileContext) float64 {
+	contextLower := strings.ToLower(context)
+
+	maxScore := 0.5 // Default neutral score
+	for library, score := range ml.libraryScores {
+		if strings.Contains(contextLower, library) {
+			if score > maxScore {
+				maxScore = score
+			}
+		}
+	}
+
+	return maxScore
+}
+
+func (ml *MLConfidenceScorer) calculateStageConfidenceBoost(finding types.Finding) float64 {
+	stage, exists := finding.Metadata["stage"]
+	if !exists {
+		return 0.0
+	}
+
+	switch stage {
+	case "L2":
+		return 0.3 // High confidence boost for L2 (dataflow) findings
+	case "L1":
+		return 0.2 // Medium confidence boost for L1 (AST) findings
+	case "L0":
+		return 0.0 // No boost for L0 (regex) findings
+	default:
+		return 0.0
+	}
+}
+
+func (ml *MLConfidenceScorer) determinePredictionCategory(confidence float64) string {
+	switch {
+	case confidence >= 0.9:
+		return "very_high_confidence"
+	case confidence >= 0.75:
+		return "high_confidence"
+	case confidence >= 0.5:
+		return "medium_confidence"
+	case confidence >= 0.25:
+		return "low_confidence"
+	default:
+		return "very_low_confidence"
+	}
+}
+
+func (ml *MLConfidenceScorer) enhanceFindingWithMLData(finding types.Finding, mlScore MLPrediction, fileCtx *FileContext) types.Finding {
+	// Update finding with ML confidence score
+	enhanced := finding
+	enhanced.Confidence = mlScore.Confidence
+
+	// Enhance metadata with ML information
+	if enhanced.Metadata == nil {
+		enhanced.Metadata = make(map[string]string)
+	}
+
+	enhanced.Metadata["ml_confidence"] = fmt.Sprintf("%.3f", mlScore.Confidence)
+	enhanced.Metadata["ml_prediction"] = mlScore.Prediction
+	enhanced.Metadata["ml_model_version"] = mlScore.ModelVersion
+
+	// Add feature scores for debugging/transparency
+	for featureName, featureValue := range mlScore.Features {
+		enhanced.Metadata[fmt.Sprintf("ml_feature_%s", featureName)] = fmt.Sprintf("%.3f", featureValue)
+	}
+
+	// Adjust severity based on ML confidence
+	enhanced.Severity = ml.adjustSeverityByConfidence(finding.Severity, mlScore.Confidence)
+
+	return enhanced
+}
+
+func (ml *MLConfidenceScorer) adjustSeverityByConfidence(originalSeverity string, confidence float64) string {
+	// Don't change severity for very high or very low confidence findings
+	if confidence >= 0.8 || confidence <= 0.1 {
+		return originalSeverity
+	}
+
+	// Be much more conservative with severity adjustments for crypto findings
+	// Only downgrade if confidence is very low (< 0.3) to avoid losing important findings
+	if confidence < 0.3 {
+		switch originalSeverity {
+		case "critical":
+			return "high" // Only downgrade critical to high, not further
+		case "high":
+			return "medium" // Only downgrade high to medium
+		// Don't downgrade medium or low severity findings
+		default:
+			return originalSeverity
+		}
+	}
+
+	// For medium confidence (0.3-0.8), preserve original severity
+	// This is especially important for crypto implementations that might have
+	// lower confidence due to context (e.g., files with "test" in name)
+	return originalSeverity
+}
+
+func (ml *MLConfidenceScorer) sortFindingsByConfidence(findings []types.Finding) []types.Finding {
+	// Simple bubble sort by confidence (highest first)
+	// In practice, would use more efficient sorting
+	for i := 0; i < len(findings); i++ {
+		for j := i + 1; j < len(findings); j++ {
+			if findings[i].Confidence < findings[j].Confidence {
+				findings[i], findings[j] = findings[j], findings[i]
+			}
+		}
+	}
+	return findings
+}
+
+// GetConfidenceDistribution returns distribution of confidence scores
+func (ml *MLConfidenceScorer) GetConfidenceDistribution(findings []types.Finding) map[string]int {
+	distribution := map[string]int{
+		"very_high": 0, // >= 0.9
+		"high":      0, // >= 0.75
+		"medium":    0, // >= 0.5
+		"low":       0, // >= 0.25
+		"very_low":  0, // < 0.25
+	}
+
+	for _, finding := range findings {
+		switch {
+		case finding.Confidence >= 0.9:
+			distribution["very_high"]++
+		case finding.Confidence >= 0.75:
+			distribution["high"]++
+		case finding.Confidence >= 0.5:
+			distribution["medium"]++
+		case finding.Confidence >= 0.25:
+			distribution["low"]++
+		default:
+			distribution["very_low"]++
+		}
+	}
+
+	return distribution
+}
+
+// GetTopFindings returns the highest confidence findings
+func (ml *MLConfidenceScorer) GetTopFindings(findings []types.Finding, limit int) []types.Finding {
+	sortedFindings := ml.sortFindingsByConfidence(findings)
+
+	if len(sortedFindings) <= limit {
+		return sortedFindings
+	}
+
+	return sortedFindings[:limit]
+}
+
+// extractLibraryImplementationFeature detects crypto library implementation patterns
+func (ml *MLConfidenceScorer) extractLibraryImplementationFeature(context string, fileCtx *FileContext) float64 {
+	// If we're in library analysis mode, look for implementation patterns
+	if !ml.libraryAnalysisMode {
+		return 0.0 // Not relevant for application usage analysis
+	}
+
+	contextLower := strings.ToLower(context)
+
+	// High confidence patterns for crypto library implementations
+	highConfidencePatterns := []string{
+		"class ", "struct ", "final :", "public ", "private ", "protected ",
+		"algorithm", "cipher", "digest", "hash", "encrypt", "decrypt",
+		"keygen", "sign", "verify", "transform", "init", "update",
+		"processblock", "reset", "doFinal", "getAlgorithmName",
+		"getDigestSize", "getBlockSize", "getKeySize",
+		"return \"", "implements ", "extends ",
+
+		// Rust-specific patterns
+		"impl ", "trait ", "struct ", "enum ", "pub fn", "fn ",
+		"use ring::", "use aws_lc_rs::", "use rustcrypto::",
+		"KeyPair", "PrivateKey", "PublicKey", "Signature",
+		"&dyn ", "Box<", "Result<", "Option<",
+
+		// Go-specific patterns
+		"package ", "func ", "type ", "var ", "const ",
+		"func New", "func (", ") Write(", ") Sum(", ") Reset(",
+		"crypto.RegisterHash", "hash.Hash", "cipher.Block",
+		"interface{}", "[]byte", "import \"",
+
+		// Java-specific patterns
+		"public class ", "private class ", "interface ", "abstract class ",
+		"public void ", "private void ", "protected void ",
+		"public int ", "public byte[]", "implements ",
+		"extends ", "package ", "import ",
+		"@Override", "throws ", "final class ",
+		"static final ", "public final ",
+
+		// Bouncy Castle specific patterns
+		"extends Engine", "implements Digest", "implements BlockCipher",
+		"implements StreamCipher", "implements AsymmetricBlockCipher",
+		"implements Signer", "implements DSA", "implements BasicAgreement",
+		"CipherParameters", "KeyParameter", "ParametersWithIV",
+		"AsymmetricKeyParameter", "ECKeyParameters", "RSAKeyParameters",
+		"AsymmetricCipherKeyPair", "KeyGenerationParameters",
+		"CryptoException", "DataLengthException", "InvalidCipherTextException",
+		"SecurityServicesRegistrar", "CryptoServicesRegistrar",
+
+		// JavaScript/Node.js specific patterns
+		"function ", "const ", "let ", "var ", "module.exports",
+		"require(", "internalBinding(", "exports.", "this.",
+		"new Hash(", "new Hmac(", "new RSACipherJob(", "new AESCipherJob(",
+		"asyncDigest", "jobPromise", "kCryptoJobAsync", "kKeyVariant",
+		"crypto.createHash", "crypto.createCipher", "crypto.generateKeyPair",
+		"subtle.digest", "subtle.encrypt", "subtle.decrypt", "subtle.sign",
+		"WebCrypto", "CryptoKey", "SubtleCrypto", "getRandomValues",
+		"validateString", "validateUint32", "validateMaxBufferLength",
+		"lazyDOMException", "normalizeHashName", "normalizeEncoding",
+		"ReflectApply", "ObjectSetPrototypeOf", "StringPrototypeToLowerCase",
+	}
+
+	// Medium confidence patterns
+	mediumConfidencePatterns := []string{
+		"engine", "signer", "generator", "parameters", "wrapper",
+		"keysize", "blocksize", "ivsize", "tagsize",
+		"process", "update", "finish", "output", "input",
+		"validate", "verify", "compute", "derive",
+		"encode", "decode", "wrap", "unwrap",
+		"mac", "hmac", "kdf", "hkdf", "pbkdf2", "scrypt",
+		"mode", "padding", "encoding", "agreement",
+
+		// Java method patterns
+		"getString", "getBytes", "getInstance", "newInstance",
+		"toByteArray", "toString", "valueOf", "parseInt",
+		"System.arraycopy", "Arrays.fill", "Math.max", "Math.min",
+
+		// Bouncy Castle method patterns
+		"processBytes", "doFinal", "getOutputSize", "init",
+		"getAlgorithmName", "reset", "getDigestSize", "getBlockSize",
+	}
+
+	// Count pattern matches
+	score := 0.0
+
+	// High confidence pattern matching
+	for _, pattern := range highConfidencePatterns {
+		if strings.Contains(contextLower, pattern) {
+			score += 0.15 // Each high-confidence match adds 15%
+		}
+	}
+
+	// Medium confidence pattern matching
+	for _, pattern := range mediumConfidencePatterns {
+		if strings.Contains(contextLower, pattern) {
+			score += 0.08 // Each medium-confidence match adds 8%
+		}
+	}
+
+	// Language-specific implementation detection
+	if fileCtx != nil {
+		fileExtension := strings.ToLower(fileCtx.FilePath)
+
+		// Java implementation patterns
+		if strings.HasSuffix(fileExtension, ".java") {
+			javaPatterns := []string{
+				"public class", "implements", "extends", "package org.bouncycastle",
+				"import org.bouncycastle", "@Override", "throws Exception",
+				"final class", "abstract class", "interface",
+			}
+			for _, pattern := range javaPatterns {
+				if strings.Contains(contextLower, pattern) {
+					score += 0.1 // Java-specific bonus
+				}
+			}
+		}
+
+		// Rust implementation patterns
+		if strings.HasSuffix(fileExtension, ".rs") {
+			rustPatterns := []string{
+				"impl ", "trait ", "pub struct", "pub enum", "pub fn",
+				"use ring::", "use aws_lc_rs::", "Result<", "Option<",
+			}
+			for _, pattern := range rustPatterns {
+				if strings.Contains(contextLower, pattern) {
+					score += 0.1 // Rust-specific bonus
+				}
+			}
+		}
+
+		// Go implementation patterns
+		if strings.HasSuffix(fileExtension, ".go") {
+			goPatterns := []string{
+				"package ", "func ", "type ", "interface", "struct",
+				"crypto.RegisterHash", "hash.Hash", "[]byte",
+			}
+			for _, pattern := range goPatterns {
+				if strings.Contains(contextLower, pattern) {
+					score += 0.1 // Go-specific bonus
+				}
+			}
+		}
+
+		// C/C++ implementation patterns
+		if strings.HasSuffix(fileExtension, ".c") || strings.HasSuffix(fileExtension, ".cpp") || strings.HasSuffix(fileExtension, ".h") {
+			cPatterns := []string{
+				"class ", "struct ", "typedef ", "#include", "extern ",
+				"static ", "inline ", "const ", "void *", "unsigned char",
+			}
+			for _, pattern := range cPatterns {
+				if strings.Contains(contextLower, pattern) {
+					score += 0.1 // C/C++-specific bonus
+				}
+			}
+		}
+
+		// JavaScript/Node.js implementation patterns
+		if strings.HasSuffix(fileExtension, ".js") || strings.HasSuffix(fileExtension, ".ts") {
+			jsPatterns := []string{
+				"function ", "const ", "let ", "var ", "module.exports",
+				"require(", "import ", "export ", "async ", "await ",
+				"internalBinding(", "jobPromise(", "lazyDOMException",
+				"crypto.createHash", "crypto.generateKeyPair", "new Hash(",
+				"validateString", "validateUint32", "normalizeHashName",
+				"ObjectSetPrototypeOf", "ReflectApply", "primordials",
+				"internal/crypto/", "internal/util", "internal/validators",
+			}
+			for _, pattern := range jsPatterns {
+				if strings.Contains(contextLower, pattern) {
+					score += 0.1 // JavaScript-specific bonus
+				}
+			}
+		}
+	}
+
+	// Cap the score at 1.0
+	if score > 1.0 {
+		score = 1.0
+	}
+
+	return score
+}
+
+func (ml *MLConfidenceScorer) getVendorCodeWeight() float64 {
+	if ml.libraryAnalysisMode {
+		return 0.3 // Positive boost in library analysis mode
+	}
+	return -0.3 // Negative penalty for vendor code in application analysis
+}
+
+// AutoDetectLibraryAnalysisMode automatically detects if we're analyzing a crypto library
+func (ml *MLConfidenceScorer) AutoDetectLibraryAnalysisMode(fileCtx *FileContext) {
+	if fileCtx == nil {
+		return
+	}
+
+	// Check if we're scanning a known crypto library directory structure
+	filePath := strings.ToLower(fileCtx.FilePath)
+
+	// Known crypto libraries and their patterns
+	libraryPatterns := map[string][]string{
+		"botan": {
+			"botan/", "/botan/", "botan\\",
+			"src/lib/", "src\\lib\\",
+			"block/", "hash/", "pubkey/", "stream/", "mac/", "kdf/",
+			"crypto/", "crypt/", "algorithm/", "cipher/",
+		},
+		"openssl": {
+			"openssl/", "/openssl/", "openssl\\",
+			"crypto/", "/crypto/", "engines/", "providers/",
+			"ssl/", "apps/", "test/", "demos/",
+		},
+		"libsodium": {
+			"libsodium/", "/libsodium/", "libsodium\\",
+			"src/libsodium/", "crypto_", "sodium/",
+		},
+		"golang-crypto": {
+			"golang.org/x/crypto/", "/crypto/", "crypto\\",
+			"argon2/", "blake2", "chacha20", "curve25519", "ed25519",
+			"hkdf/", "md4/", "pbkdf2/", "ripemd160/", "salsa20/",
+			"scrypt/", "sha3/", "tea/", "twofish/", "xtea/", "xts/",
+		},
+		"rustls": {
+			"rustls/", "/rustls/", "rustls\\",
+			"src/crypto/", "aws_lc_rs/", "ring/",
+			"post-quantum/", "pq/", "hybrid/",
+		},
+		"bouncy-castle": {
+			"bouncycastle/", "/bouncycastle/", "bouncycastle\\",
+			"org/bouncycastle/", "org\\bouncycastle\\",
+			"bc-java/", "/bc-java/", "bc-java\\",
+			"crypto/", "pqc/", "asn1/", "pkix/",
+			"engines/", "digests/", "macs/", "signers/",
+			"generators/", "params/", "agreement/",
+		},
+		"java-crypto": {
+			"java/security/", "javax/crypto/",
+			"java\\security\\", "javax\\crypto\\",
+			"crypto/", "security/", "cipher/", "digest/",
+		},
+		"nodejs": {
+			"node/", "/node/", "node\\",
+			"lib/internal/crypto/", "lib\\internal\\crypto\\",
+			"internal/crypto/", "internal\\crypto\\",
+			"crypto.js", "webcrypto.js", "hash.js", "cipher.js",
+			"aes.js", "rsa.js", "ec.js", "sig.js", "keys.js",
+			"pbkdf2.js", "scrypt.js", "hkdf.js", "random.js",
+			"diffiehellman.js", "x509.js", "certificate.js",
+			"keygen.js", "util.js", "webidl.js", "cfrg.js",
+		},
+	}
+
+	// Check if file path matches any crypto library patterns
+	detectedLibrary := ""
+	for library, patterns := range libraryPatterns {
+		for _, pattern := range patterns {
+			if strings.Contains(filePath, pattern) {
+				detectedLibrary = library
+				break
+			}
+		}
+		if detectedLibrary != "" {
+			break
+		}
+	}
+
+	if detectedLibrary != "" {
+		ml.libraryAnalysisMode = true
+		ml.currentLibraryName = detectedLibrary
+	}
+}

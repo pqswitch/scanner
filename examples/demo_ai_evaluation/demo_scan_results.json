@@ -1,0 +1,47 @@
+[
+  {
+    "id": "demo-001",
+    "rule_id": "",
+    "file": "auth.go",
+    "line": 42,
+    "column": 0,
+    "message": "MD5 hash function detected",
+    "severity": "critical",
+    "confidence": 0.95,
+    "crypto_type": "hash",
+    "algorithm": "MD5",
+    "context": "Used in password hashing function",
+    "suggestion": "Replace with SHA-256 or bcrypt",
+    "timestamp": "0001-01-01T00:00:00Z"
+  },
+  {
+    "id": "demo-002",
+    "rule_id": "",
+    "file": "README.md",
+    "line": 15,
+    "column": 0,
+    "message": "RSA mentioned in documentation",
+    "severity": "high",
+    "confidence": 0.6,
+    "crypto_type": "asymmetric",
+    "algorithm": "RSA",
+    "context": "Documentation comment about RSA encryption",
+    "suggestion": "Consider post-quantum alternatives",
+    "timestamp": "0001-01-01T00:00:00Z"
+  },
+  {
+    "id": "demo-003",
+    "rule_id": "",
+    "file": "crypto.go",
+    "line": 128,
+    "column": 0,
+    "message": "AES encryption implementation",
+    "severity": "medium",
+    "confidence": 0.8,
+    "crypto_type": "symmetric",
+    "algorithm": "AES",
+    "context": "Production encryption code",
+    "suggestion": "Review key exchange mechanism",
+    "timestamp": "0001-01-01T00:00:00Z"
+  }
+]

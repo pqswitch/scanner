@@ -1,0 +1,51 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Build artifacts
+build/pqswitch
+dist/
+coverage.out
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test files
+*_test.go
+test-*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# CI/CD files
+.github/
+
+# Example files
+examples/
+repo_test/
+ml-training/repos/*
+
+# Local configuration
+.env
+*.local.yaml
+*.local.yml
+
+# Archives
+*.tar.gz
+*.zip 
+
+
+# Scan results
+*.json

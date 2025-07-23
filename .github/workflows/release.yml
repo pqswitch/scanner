@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  GO_VERSION: '1.24.3'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-release-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-release-
+          ${{ runner.os }}-go-
+      continue-on-error: true
+        
+    - name: Run tests
+      run: make test
+      
+    - name: Install GoReleaser
+      uses: goreleaser/goreleaser-action@v6
+      with:
+        distribution: goreleaser
+        version: '~> v2' 
+        install-only: true
+        
+    - name: Generate version
+      id: version
+      run: |
+        # For releases, use the tag name (remove 'v' prefix if present)
+        VERSION=${GITHUB_REF#refs/tags/}
+        VERSION=${VERSION#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+        
+    - name: Check for Docker Hub credentials
+      id: docker-creds
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        if [ -n "$DOCKER_USERNAME" ] && [ -n "$DOCKER_PASSWORD" ]; then
+          echo "available=true" >> $GITHUB_OUTPUT
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Login to Docker Hub
+      if: steps.docker-creds.outputs.available == 'true'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Create release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        VERSION: ${{ steps.version.outputs.version }}
+      run: |
+        if [ "${{ steps.docker-creds.outputs.available }}" = "true" ]; then
+          goreleaser release --clean
+        else
+          echo "Docker credentials not available, skipping Docker builds"
+          goreleaser release --clean --skip=docker
+        fi
+      
+    - name: Upload release summary
+      if: success()
+      run: |
+        echo "Release created successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "Binaries have been published to GitHub Releases." >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.docker-creds.outputs.available }}" = "true" ]; then
+          echo "Docker images have been published to Docker Hub." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Docker images were skipped (no credentials)." >> $GITHUB_STEP_SUMMARY 

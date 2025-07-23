@@ -1,0 +1,1071 @@
+version: "1.0"
+name: "Post-Quantum Cryptography Migration Rules"
+author: "PQSwitch Team"
+
+regex_rules:
+  - id: "go-rsa-keygen"
+    name: "Go RSA Key Generation"
+    description: "Detects RSA key generation in Go code"
+    pattern: "\\brsa\\.GenerateKey\\s*\\("
+    message: "RSA key generation detected. Consider migrating to ML-KEM (FIPS 203) or hybrid approach."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Replace with liboqs-go ML-KEM (FIPS 203) or hybrid RSA+ML-KEM approach"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+      - "https://github.com/open-quantum-safe/liboqs-go"
+    metadata:
+      cwe: "CWE-327"
+      nist_category: "asymmetric_encryption"
+    enabled: true
+    languages: ["go"]
+
+  - id: "go-ecdsa-keygen"
+    name: "Go ECDSA Key Generation"
+    description: "Detects ECDSA key generation in Go code"
+    pattern: "\\becdsa\\.GenerateKey\\s*\\("
+    message: "ECDSA key generation detected. Consider migrating to ML-DSA (FIPS 204) or hybrid approach."
+    severity: "high"
+    crypto_type: "signature"
+    algorithm: "ECDSA"
+    pq_replacement: "ML-DSA-65"
+    suggestion: "Replace with ML-DSA (FIPS 204) or hybrid ECDSA+ML-DSA for quantum-resistant signatures"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/204/final"
+    metadata:
+      cwe: "CWE-327"
+      nist_category: "digital_signatures"
+    enabled: true
+    languages: ["go"]
+
+  - id: "go-ecdh-keygen"
+    name: "Go ECDH Key Generation"
+    description: "Detects ECDH key agreement in Go code"
+    pattern: "\\b(ecdh\\.GenerateKey|elliptic\\.(P256|P384|P521)\\(\\)\\.ScalarMult)"
+    message: "ECDH key agreement detected. Vulnerable to quantum attacks - consider ML-KEM."
+    severity: "high"
+    crypto_type: "key_agreement"
+    algorithm: "ECDH"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Replace with ML-KEM (FIPS 203) for quantum-resistant key encapsulation"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      nist_category: "key_agreement"
+    enabled: true
+    languages: ["go"]
+
+  - id: "go-ed25519-usage"
+    name: "Go Ed25519 Usage"
+    description: "Detects Ed25519 signature usage in Go code"
+    pattern: "\\b(ed25519\\.(GenerateKey|Sign|Verify)|crypto\\.Ed25519)"
+    message: "Ed25519 signature usage detected. Quantum-vulnerable - consider ML-DSA."
+    severity: "medium"
+    crypto_type: "signature"
+    algorithm: "Ed25519"
+    pq_replacement: "ML-DSA-44"
+    suggestion: "Replace with ML-DSA (FIPS 204) or hybrid Ed25519+ML-DSA approach"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/204/final"
+    metadata:
+      cwe: "CWE-327"
+      nist_category: "digital_signatures"
+    enabled: true
+    languages: ["go"]
+
+  - id: "weak-rsa-keylength"
+    name: "Weak RSA Key Length"
+    description: "Detects RSA keys with insufficient bit length"
+    pattern: "\\b(RSA_generate_key.*\\b(512|1024)\\b|GenerateKey.*\\b(512|1024)\\b|KeyPairGenerator\\.initialize\\s*\\(\\s*(512|1024)\\s*\\))"
+    message: "Weak RSA key length detected (≤1024 bits). Use ≥2048 bits or migrate to PQ algorithms."
+    severity: "critical"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    suggestion: "Use RSA keys ≥2048 bits or preferably migrate to ML-KEM (FIPS 203)"
+    references:
+      - "https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-326"
+      security_issue: "insufficient_key_length"
+    enabled: true
+    languages: ["c", "cpp", "java", "go", "csharp"]
+
+  - id: "openssl-rsa-keygen"
+    name: "OpenSSL RSA Key Generation"
+    description: "Detects OpenSSL RSA key generation functions"
+    pattern: "\\b(RSA_generate_key(_ex)?|EVP_PKEY_keygen.*RSA)\\b"
+    message: "OpenSSL RSA key generation detected. Migrate to liboqs-OpenSSL for PQ support."
+    severity: "critical"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use OQS_KEM_new() with ML-KEM (FIPS 203) from liboqs-OpenSSL"
+    references:
+      - "https://github.com/open-quantum-safe/openssl"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "openssl"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "openssl-ecdh-usage"
+    name: "OpenSSL ECDH Usage"
+    description: "Detects OpenSSL ECDH key agreement functions"
+    pattern: "\\b(ECDH_compute_key|EVP_PKEY_derive.*EC|EC_KEY_generate_key)\\b"
+    message: "OpenSSL ECDH usage detected. Vulnerable to quantum attacks."
+    severity: "high"
+    crypto_type: "key_agreement"
+    algorithm: "ECDH"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Replace with ML-KEM (FIPS 203) using liboqs-OpenSSL"
+    references:
+      - "https://github.com/open-quantum-safe/openssl"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "openssl"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "java-rsa-keygen"
+    name: "Java RSA Key Generation"
+    description: "Detects RSA key generation in Java code"
+    pattern: "\\bKeyPairGenerator\\.getInstance\\s*\\(\\s*[\"']RSA[\"']\\s*\\)"
+    message: "Java RSA key generation detected. Consider Bouncy Castle PQC provider."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use Bouncy Castle PQC provider with ML-KEM (FIPS 203) or hybrid RSA+ML-KEM"
+    references:
+      - "https://www.bouncycastle.org/java.html"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "java_crypto"
+    enabled: true
+    languages: ["java"]
+
+  - id: "java-ecdh-usage"
+    name: "Java ECDH Usage"
+    description: "Detects ECDH key agreement in Java code"
+    pattern: "\\b(KeyAgreement\\.getInstance\\s*\\(\\s*[\"']ECDH[\"']\\s*\\)|KeyPairGenerator\\.getInstance\\s*\\(\\s*[\"']EC[\"']\\s*\\))"
+    message: "Java ECDH usage detected. Quantum-vulnerable key agreement."
+    severity: "high"
+    crypto_type: "key_agreement"
+    algorithm: "ECDH"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use Bouncy Castle PQC provider with ML-KEM (FIPS 203)"
+    references:
+      - "https://www.bouncycastle.org/java.html"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "java_crypto"
+    enabled: true
+    languages: ["java"]
+
+  - id: "rust-rsa-usage"
+    name: "Rust RSA Usage"
+    description: "Detects RSA usage in Rust code"
+    pattern: "\\b(rsa::(RsaPrivateKey|RsaPublicKey)::new|RsaPrivateKey::generate)"
+    message: "Rust RSA usage detected. Consider migrating to post-quantum alternatives."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use pqcrypto-* crates or oqs-sys for ML-KEM (FIPS 203) implementation"
+    references:
+      - "https://github.com/rustpq/pqcrypto"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      platform: "rust"
+    enabled: true
+    languages: ["rust"]
+
+  - id: "rust-ecdsa-usage"
+    name: "Rust ECDSA Usage"
+    description: "Detects ECDSA usage in Rust code"
+    pattern: "\\b(ecdsa::(SigningKey|VerifyingKey)|p256::ecdsa::SigningKey)"
+    message: "Rust ECDSA usage detected. Quantum-vulnerable signatures."
+    severity: "high"
+    crypto_type: "signature"
+    algorithm: "ECDSA"
+    pq_replacement: "ML-DSA-65"
+    suggestion: "Use pqcrypto-* crates for ML-DSA (FIPS 204) implementation"
+    references:
+      - "https://github.com/rustpq/pqcrypto"
+      - "https://csrc.nist.gov/pubs/fips/204/final"
+    metadata:
+      cwe: "CWE-327"
+      platform: "rust"
+    enabled: true
+    languages: ["rust"]
+
+  - id: "dotnet-rsa-keygen"
+    name: ".NET RSA Key Generation"
+    description: "Detects RSA key generation in .NET applications"
+    pattern: "\\b(RSA\\.Create\\s*\\(\\)|new\\s+RSACryptoServiceProvider\\s*\\()"
+    message: ".NET RSA key generation detected. Migrate to PQ-safe libraries or hybrid approaches."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Explore liboqs-dotnet for ML-KEM (FIPS 203) or hybrid RSA+PQ implementation"
+    references:
+      - "https://github.com/open-quantum-safe/liboqs-dotnet"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      platform: "dotnet"
+    enabled: true
+    languages: ["csharp"]
+
+  - id: "weak-hash-md5"
+    name: "MD5 Hash Usage"
+    description: "Detects actual usage of MD5 hash algorithm in code"
+    pattern: "(?i)(createHash\\(\\s*[\"']md5[\"']|md5\\.New\\(\\)|hashlib\\.md5\\(\\)|MessageDigest\\.getInstance\\(\\s*[\"']MD5[\"']|CryptoJS\\.MD5\\(|EVP_md5\\(\\))"
+    message: "MD5 hash algorithm detected. Cryptographically broken - replace immediately."
+    severity: "critical"
+    crypto_type: "hash"
+    algorithm: "MD5"
+    suggestion: "Replace with SHA-3, BLAKE2, or SHAKE for quantum-resistant hashing"
+    references:
+      - "https://tools.ietf.org/rfc/rfc6151.txt"
+      - "https://csrc.nist.gov/projects/hash-functions/sha-3-project"
+    metadata:
+      cwe: "CWE-327"
+      deprecated: "true"
+    enabled: true
+    languages: ["go", "java", "javascript", "python", "c", "cpp", "rust", "csharp"]
+
+  - id: "weak-hash-md5-test-context"
+    name: "MD5 Usage in Test Context"
+    description: "Detects MD5 usage in test files or for non-cryptographic purposes"
+    pattern: "(?i)(test.*md5|md5.*test|cache.*md5|md5.*cache|checksum.*md5|md5.*checksum|digest.*md5|md5.*digest|compare.*md5|md5.*compare)"
+    message: "MD5 usage detected in test or non-cryptographic context. Consider modern alternatives even for testing."
+    severity: "info"
+    crypto_type: "hash"
+    algorithm: "MD5"
+    suggestion: "For testing: use SHA-256. For checksums: use xxHash or BLAKE2. For caching: use SHA-256 or CityHash"
+    references:
+      - "https://tools.ietf.org/rfc/rfc6151.txt"
+      - "https://github.com/Cyan4973/xxHash"
+    metadata:
+      cwe: "CWE-327"
+      deprecated: "true"
+      test_context: "true"
+    enabled: true
+    languages: ["go", "java", "javascript", "python", "c", "cpp", "rust", "csharp", "scala"]
+
+  - id: "weak-hash-sha1"
+    name: "SHA-1 Hash Usage"
+    description: "Detects actual usage of SHA-1 hash algorithm in code"
+    pattern: "(?i)(createHash\\(\\s*[\"']sha1[\"']|sha1\\.New\\(\\)|hashlib\\.sha1\\(\\)|MessageDigest\\.getInstance\\(\\s*[\"']SHA-?1[\"']|CryptoJS\\.SHA1\\(|EVP_sha1\\(\\))"
+    message: "SHA-1 hash algorithm detected. Deprecated due to collision attacks."
+    severity: "high"
+    crypto_type: "hash"
+    algorithm: "SHA1"
+    suggestion: "Replace with SHA-256, SHA-3, or SHAKE for future PQ resistance"
+    references:
+      - "https://shattered.io/"
+      - "https://csrc.nist.gov/projects/hash-functions/sha-3-project"
+    metadata:
+      cwe: "CWE-327"
+      deprecated: "true"
+    enabled: true
+    languages: ["go", "java", "javascript", "python", "c", "cpp", "rust", "csharp"]
+
+  - id: "dnssec-protocol-sha1"
+    name: "DNSSEC Protocol SHA-1 Support"
+    description: "Detects SHA-1 usage in DNSSEC protocol implementation (legitimate)"
+    pattern: "(?i)(DNSSEC.*SHA1|NSEC3.*SHA1|DNS.*SHA1|RSASHA1|dnssec.*sha1|nsec3.*sha1)"
+    message: "DNSSEC protocol SHA-1 support detected. This is legitimate for RFC compliance."
+    severity: "info"
+    crypto_type: "protocol_implementation"
+    algorithm: "SHA1"
+    suggestion: "DNSSEC SHA-1 support is required by RFC 4034/5155. Monitor for protocol deprecation."
+    references:
+      - "https://tools.ietf.org/rfc/rfc4034.txt"
+      - "https://tools.ietf.org/rfc/rfc5155.txt"
+    metadata:
+      protocol: "dnssec"
+      rfc_compliant: "true"
+      legitimate_usage: "true"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "dns-tls-client-usage"
+    name: "DNS-over-TLS Client Implementation"
+    description: "Detects TLS client usage in DNS resolver context"
+    pattern: "(?i)(SSL_CTX_new.*TLS_client|dns.*tls|tls.*dns|dnstls|dot_|doh_)"
+    message: "DNS-over-TLS client implementation detected. Consider post-quantum TLS planning."
+    severity: "info"
+    crypto_type: "protocol_implementation"
+    algorithm: "TLS"
+    suggestion: "Plan for post-quantum TLS support in DNS-over-TLS when available"
+    references:
+      - "https://tools.ietf.org/rfc/rfc7858.txt"
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+    metadata:
+      protocol: "dns_over_tls"
+      service: "dns_resolver"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "crypto-protocol-implementation"
+    name: "Cryptographic Protocol Implementation"
+    description: "Detects legitimate crypto protocol implementations in system services"
+    pattern: "(?i)(case\\s+.*ALGORITHM.*:|case\\s+.*DIGEST.*:|case\\s+.*CIPHER.*:|switch.*algorithm|algorithm.*switch)"
+    message: "Cryptographic protocol implementation detected. Review for standards compliance."
+    severity: "info"
+    crypto_type: "protocol_implementation"
+    algorithm: "various"
+    suggestion: "Verify implementation follows current standards and monitor for protocol updates"
+    metadata:
+      analysis_type: "protocol_support"
+      system_service: "true"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "system-service-crypto"
+    name: "System Service Cryptographic Usage"
+    description: "Detects crypto usage in system service context (lower risk)"
+    pattern: "(?i)(src/(resolve|network|journal|login|boot|core|shared)/.*\\.(c|cpp|h))"
+    message: "System service crypto usage detected. Review for protocol compliance needs."
+    severity: "info"
+    crypto_type: "system_service"
+    algorithm: "various"
+    suggestion: "System services often require legacy crypto for protocol compatibility"
+    metadata:
+      service_context: "true" 
+      protocol_compliance: "likely"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "sha224-usage"
+    name: "SHA-224 Hash Usage"
+    description: "Detects SHA-224 usage - consider PQ-resistant alternatives"
+    pattern: "\\b(sha224\\.New\\(\\)|hashlib\\.sha224\\(\\)|MessageDigest\\.getInstance\\s*\\(\\s*[\"']SHA-?224[\"']\\s*\\))"
+    message: "SHA-224 usage detected. Consider migrating to SHA-3 family for PQ resilience."
+    severity: "low"
+    crypto_type: "hash"
+    algorithm: "SHA224"
+    suggestion: "Consider SHA-3, SHAKE128, or SHAKE256 for enhanced PQ resilience"
+    references:
+      - "https://csrc.nist.gov/projects/hash-functions/sha-3-project"
+    metadata:
+      cwe: "CWE-327"
+      future_proofing: "true"
+    enabled: true
+    languages: ["go", "python", "java", "c", "cpp"]
+
+  - id: "nodejs-crypto-rsa"
+    name: "Node.js RSA Crypto Usage"
+    description: "Detects RSA usage in Node.js crypto module"
+    pattern: "\\bcrypto\\.generateKeyPair\\s*\\(\\s*[\"']rsa[\"']\\s*\\)|crypto\\.(publicEncrypt|privateDecrypt)\\b"
+    message: "Node.js RSA crypto usage detected. Consider migrating to post-quantum alternatives."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use node-oqs for ML-KEM (FIPS 203) or implement hybrid classical+PQ approach"
+    references:
+      - "https://github.com/open-quantum-safe/liboqs-node"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      platform: "nodejs"
+    enabled: true
+    languages: ["javascript", "typescript"]
+
+  - id: "python-rsa-usage"
+    name: "Python RSA Library Usage"
+    description: "Detects RSA usage in Python cryptography libraries"
+    pattern: "\\b(from\\s+Crypto\\.PublicKey\\s+import\\s+RSA|RSA\\.generate|rsa\\.newkeys)\\b"
+    message: "Python RSA usage detected. Consider migrating to post-quantum cryptography."
+    severity: "high"
+    crypto_type: "asymmetric"
+    algorithm: "RSA"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Use liboqs-python for ML-KEM (FIPS 203) implementation"
+    references:
+      - "https://github.com/open-quantum-safe/liboqs-python"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      platform: "python"
+    enabled: true
+    languages: ["python"]
+
+  - id: "tls-version-check"
+    name: "TLS Version Configuration"
+    description: "Detects TLS version configuration that may need PQ updates"
+    pattern: "\\bTLS_1_[0-2]|SSLv[23]|ssl_protocols.*TLSv1\\.[0-2]\\b"
+    message: "Legacy TLS version detected. Ensure migration path to TLS 1.3 with post-quantum support."
+    severity: "medium"
+    crypto_type: "protocol"
+    algorithm: "TLS"
+    suggestion: "Configure TLS 1.3 with post-quantum cipher suites when available"
+    references:
+      - "https://tools.ietf.org/rfc/rfc8446.txt"
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+    metadata:
+      cwe: "CWE-327"
+      protocol: "tls"
+    enabled: true
+    languages: ["go", "java", "javascript", "python", "c", "cpp"]
+
+  - id: "tls-version-test-context"
+    name: "TLS Version in Test Context"
+    description: "Detects legacy TLS versions in test files (usually for testing purposes)"
+    pattern: "(?i)(test.*ssl|ssl.*test|test.*tls|tls.*test|suite.*ssl|ssl.*suite|assert.*ssl|ssl.*assert|conf\\.set.*ssl|ssl.*conf)"
+    message: "Legacy TLS version usage detected in test context. Verify this is intentional for testing."
+    severity: "info"
+    crypto_type: "protocol"
+    algorithm: "TLS"
+    suggestion: "If testing legacy TLS support, document the purpose. Consider testing TLS 1.3 migration paths."
+    references:
+      - "https://tools.ietf.org/rfc/rfc8446.txt"
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+    metadata:
+      cwe: "CWE-327"
+      protocol: "tls"
+      test_context: "true"
+    enabled: true
+    languages: ["go", "java", "javascript", "python", "c", "cpp", "scala"]
+
+  - id: "tls-config-kconfig"
+    name: "TLS Configuration in Kconfig"
+    description: "Detects TLS configuration options in Kconfig build files"
+    pattern: "(?i)(config\\s+.*tls|config\\s+.*ssl|config\\s+.*cipher|bool\\s+.*tls|bool\\s+.*ssl)"
+    message: "TLS configuration option detected in build system. Review for post-quantum migration planning."
+    severity: "info"
+    crypto_type: "configuration"
+    algorithm: "TLS"
+    suggestion: "Plan for post-quantum cipher suite configuration options when available"
+    references:
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+    metadata:
+      cwe: "CWE-327"
+      build_config: "true"
+    enabled: true
+    languages: []
+
+  - id: "tls-enum-definition"
+    name: "TLS Protocol Enum Definition"
+    description: "Detects TLS protocol enum definitions in C/C++ code (not comments or documentation)"
+    pattern: "\\b(enum\\s+\\w*[Ss][Ss][Ll]\\w*\\s*\\{|typedef\\s+enum\\s+\\w*[Ss][Ss][Ll]\\w*|#define\\s+[A-Z_]*SSL[A-Z_]*\\s+|static\\s+const\\s+\\w*\\s+[A-Z_]*SSL[A-Z_]*\\s*=)"
+    message: "TLS protocol enum/constant definition detected. Consider adding TLS 1.3 options."
+    severity: "info"
+    crypto_type: "definition"
+    algorithm: "TLS"
+    suggestion: "Add TLS 1.3 and future post-quantum protocol options to enum definitions"
+    references:
+      - "https://tools.ietf.org/rfc/rfc8446.txt"
+    metadata:
+      analysis_type: "definition"
+      protocol: "tls"
+    enabled: true
+    languages: ["c", "cpp"]
+
+  - id: "tls-cipher-config"
+    name: "TLS Cipher Suite Configuration"
+    description: "Detects TLS cipher suite configuration (not usage)"
+    pattern: "(?i)(KEY_EXCHANGE.*ENABLED|CIPHER.*ENABLED|config.*cipher|bool.*cipher)"
+    message: "TLS cipher suite configuration detected. Plan for post-quantum cipher options."
+    severity: "info"
+    crypto_type: "configuration"
+    algorithm: "TLS_CIPHERS"
+    suggestion: "Add configuration options for hybrid classical+PQ cipher suites"
+    references:
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+    metadata:
+      build_config: "true"
+    enabled: true
+    languages: []
+
+  - id: "third-party-crypto-module"
+    name: "Third-Party Crypto Module"
+    description: "Detects crypto usage in third-party modules (lower priority)"
+    pattern: "(?i)(modules/.*tls|modules/.*ssl|ext/.*crypto|third_party.*crypto)"
+    message: "Crypto usage detected in third-party module. Review module update/migration plans."
+    severity: "info"
+    crypto_type: "third_party"
+    algorithm: "various"
+    suggestion: "Monitor third-party modules for post-quantum crypto support"
+    metadata:
+      third_party: "true"
+    enabled: true
+    languages: []
+
+  # =============================================================================
+  # RUBY NACL LIBRARY RULES - Ruby Cryptography Support
+  # =============================================================================
+
+  - id: "ruby-rbnacl-module-usage"
+    name: "Ruby RbNaCl Module Usage"
+    description: "Detects RbNaCl module usage in Ruby code"
+    pattern: "\\b(require\\s+[\"']rbnacl[\"']|module\\s+RbNaCl|RbNaCl::)"
+    message: "Ruby RbNaCl module usage detected. Modern crypto library - review for post-quantum planning."
+    severity: "info"
+    crypto_type: "import"
+    algorithm: "various"
+    suggestion: "RbNaCl provides modern crypto - plan for post-quantum algorithm updates"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://nacl.cr.yp.to/"
+    metadata:
+      library: "rbnacl"
+      analysis_type: "module_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-ed25519-signatures"
+    name: "Ruby Ed25519 Signatures"
+    description: "Detects Ed25519 signature usage in Ruby NaCl"
+    pattern: "\\b(RbNaCl::(SigningKey|VerifyKey)|Signatures::Ed25519|ed25519.*new|sign_ed25519)"
+    message: "Ruby Ed25519 signature usage detected. Modern but quantum-vulnerable signatures."
+    severity: "medium"
+    crypto_type: "signature"
+    algorithm: "Ed25519"
+    pq_replacement: "ML-DSA-44"
+    suggestion: "Ed25519 is modern but quantum-vulnerable - plan migration to ML-DSA (FIPS 204)"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://csrc.nist.gov/pubs/fips/204/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "rbnacl"
+      quantum_vulnerable: "true"
+      modern_crypto: "true"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-curve25519-key-agreement"
+    name: "Ruby Curve25519 Key Agreement"
+    description: "Detects Curve25519 key agreement in Ruby NaCl"
+    pattern: "\\b(RbNaCl::(PrivateKey|PublicKey|Box)|Curve25519XSalsa20Poly1305|to_curve25519.*key)"
+    message: "Ruby Curve25519 key agreement detected. Modern but quantum-vulnerable key exchange."
+    severity: "medium"
+    crypto_type: "key_agreement"
+    algorithm: "Curve25519"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Curve25519 is modern but quantum-vulnerable - plan migration to ML-KEM (FIPS 203)"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "rbnacl"
+      quantum_vulnerable: "true"
+      modern_crypto: "true"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-xsalsa20-encryption"
+    name: "Ruby XSalsa20 Encryption"
+    description: "Detects XSalsa20 stream cipher usage in Ruby NaCl"
+    pattern: "\\b(XSalsa20Poly1305|SecretBox|SimpleBox|xsalsa20.*encrypt)"
+    message: "Ruby XSalsa20 stream cipher usage detected. Good choice - quantum-resistant symmetric crypto."
+    severity: "info"
+    crypto_type: "symmetric"
+    algorithm: "XSalsa20"
+    suggestion: "XSalsa20 is quantum-resistant and provides good performance for symmetric encryption"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://nacl.cr.yp.to/secretbox.html"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-chacha20poly1305-aead"
+    name: "Ruby ChaCha20-Poly1305 AEAD"
+    description: "Detects ChaCha20-Poly1305 AEAD usage in Ruby NaCl"
+    pattern: "\\b(ChaCha20Poly1305|XChaCha20Poly1305|AEAD::.*ChaCha20|chacha20poly1305.*encrypt)"
+    message: "Ruby ChaCha20-Poly1305 AEAD usage detected. Excellent choice - quantum-resistant AEAD."
+    severity: "info"
+    crypto_type: "aead"
+    algorithm: "ChaCha20-Poly1305"
+    suggestion: "ChaCha20-Poly1305 is quantum-resistant and excellent for authenticated encryption"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://tools.ietf.org/rfc/rfc8439.txt"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-poly1305-mac"
+    name: "Ruby Poly1305 MAC"
+    description: "Detects Poly1305 MAC usage in Ruby NaCl"
+    pattern: "\\b(OneTimeAuth|Poly1305|poly1305.*auth|OneTimeAuths::Poly1305)"
+    message: "Ruby Poly1305 MAC usage detected. Good choice - quantum-resistant message authentication."
+    severity: "info"
+    crypto_type: "mac"
+    algorithm: "Poly1305"
+    suggestion: "Poly1305 is quantum-resistant and provides excellent MAC functionality"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://tools.ietf.org/rfc/rfc8439.txt"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-blake2b-hashing"
+    name: "Ruby BLAKE2b Hashing"
+    description: "Detects BLAKE2b hash usage in Ruby NaCl"
+    pattern: "\\b(Hash::Blake2b|Blake2b\\.hash|blake2b.*digest|BLAKE2b)"
+    message: "Ruby BLAKE2b hash usage detected. Excellent choice - quantum-resistant and high-performance."
+    severity: "info"
+    crypto_type: "hash"
+    algorithm: "BLAKE2b"
+    suggestion: "BLAKE2b is quantum-resistant and provides excellent performance for hashing"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://blake2.net/"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-sha256-hashing"
+    name: "Ruby SHA-256 Hashing"
+    description: "Detects SHA-256 hash usage in Ruby NaCl"
+    pattern: "\\b(Hash::SHA256|SHA256\\.hash|sha256.*digest|RbNaCl.*SHA256)"
+    message: "Ruby SHA-256 hash usage detected. Good choice - quantum-resistant hash function."
+    severity: "info"
+    crypto_type: "hash"
+    algorithm: "SHA256"
+    suggestion: "SHA-256 is quantum-resistant and widely supported"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://csrc.nist.gov/publications/detail/fips/180/4/final"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-sha512-hashing"
+    name: "Ruby SHA-512 Hashing"
+    description: "Detects SHA-512 hash usage in Ruby NaCl"
+    pattern: "\\b(Hash::SHA512|SHA512\\.hash|sha512.*digest|RbNaCl.*SHA512)"
+    message: "Ruby SHA-512 hash usage detected. Good choice - quantum-resistant hash function."
+    severity: "info"
+    crypto_type: "hash"
+    algorithm: "SHA512"
+    suggestion: "SHA-512 is quantum-resistant and provides excellent security margins"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://csrc.nist.gov/publications/detail/fips/180/4/final"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-argon2-password-hashing"
+    name: "Ruby Argon2 Password Hashing"
+    description: "Detects Argon2 password hashing in Ruby NaCl"
+    pattern: "\\b(PasswordHash::Argon2|Argon2.*hash|argon2.*password|ARGON2)"
+    message: "Ruby Argon2 password hashing detected. Excellent choice - quantum-resistant and memory-hard."
+    severity: "info"
+    crypto_type: "password_hash"
+    algorithm: "Argon2"
+    suggestion: "Argon2 is quantum-resistant and winner of Password Hashing Competition"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://github.com/P-H-C/phc-winner-argon2"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-scrypt-password-hashing"
+    name: "Ruby Scrypt Password Hashing"
+    description: "Detects Scrypt password hashing in Ruby NaCl"
+    pattern: "\\b(PasswordHash::Scrypt|Scrypt.*hash|scrypt.*password|SCRYPT)"
+    message: "Ruby Scrypt password hashing detected. Good choice - quantum-resistant memory-hard function."
+    severity: "info"
+    crypto_type: "password_hash"
+    algorithm: "Scrypt"
+    suggestion: "Scrypt is quantum-resistant but consider Argon2 for new applications"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://tools.ietf.org/rfc/rfc7914.txt"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-hmac-sha256"
+    name: "Ruby HMAC-SHA256"
+    description: "Detects HMAC-SHA256 usage in Ruby NaCl"
+    pattern: "\\b(HMAC::SHA256|HMAC.*sha256|hmac_sha256|RbNaCl.*HMAC)"
+    message: "Ruby HMAC-SHA256 usage detected. Good choice - quantum-resistant message authentication."
+    severity: "info"
+    crypto_type: "mac"
+    algorithm: "HMAC-SHA256"
+    suggestion: "HMAC-SHA256 is quantum-resistant and widely supported for MAC"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://tools.ietf.org/rfc/rfc2104.txt"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-hmac-sha512"
+    name: "Ruby HMAC-SHA512"
+    description: "Detects HMAC-SHA512 usage in Ruby NaCl"
+    pattern: "\\b(HMAC::SHA512|HMAC.*sha512|hmac_sha512|SHA512256)"
+    message: "Ruby HMAC-SHA512 usage detected. Good choice - quantum-resistant message authentication."
+    severity: "info"
+    crypto_type: "mac"
+    algorithm: "HMAC-SHA512"
+    suggestion: "HMAC-SHA512 is quantum-resistant and provides excellent security margins"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://tools.ietf.org/rfc/rfc2104.txt"
+    metadata:
+      library: "rbnacl"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-random-generation"
+    name: "Ruby Random Generation"
+    description: "Detects random generation in Ruby NaCl"
+    pattern: "\\b(RbNaCl::Random|Random\\.random_bytes|Util\\.zeros|random_bytes\\()"
+    message: "Ruby random generation detected. Good practice - cryptographically secure randomness."
+    severity: "info"
+    crypto_type: "random"
+    algorithm: "CSPRNG"
+    suggestion: "RbNaCl provides cryptographically secure random generation"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://nacl.cr.yp.to/"
+    metadata:
+      library: "rbnacl"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-sealed-box-encryption"
+    name: "Ruby Sealed Box Encryption"
+    description: "Detects sealed box (anonymous) encryption in Ruby NaCl"
+    pattern: "\\b(SealedBox|Boxes::Sealed|sealed.*encrypt|anonymous.*box)"
+    message: "Ruby sealed box encryption detected. Good for anonymous encryption - quantum-vulnerable keys."
+    severity: "medium"
+    crypto_type: "encryption"
+    algorithm: "SealedBox"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Sealed boxes use Curve25519 - plan migration to post-quantum key encapsulation"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://nacl.cr.yp.to/box.html"
+    metadata:
+      cwe: "CWE-327"
+      library: "rbnacl"
+      quantum_vulnerable: "true"
+      modern_crypto: "true"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-sodium-constants"
+    name: "Ruby Sodium Constants"
+    description: "Detects sodium constant definitions in Ruby NaCl"
+    pattern: "\\b(sodium_constant|sodium_function|sodium_primitive|sodium_type|BYTES|KEYBYTES|NONCEBYTES)"
+    message: "Ruby libsodium constant detected. Low-level sodium binding usage."
+    severity: "info"
+    crypto_type: "constant"
+    algorithm: "various"
+    suggestion: "Sodium constants indicate low-level libsodium usage - review for high-level alternatives"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://libsodium.gitbook.io/"
+    metadata:
+      library: "rbnacl"
+      analysis_type: "constant_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-group-elements"
+    name: "Ruby Group Elements"
+    description: "Detects group element usage in Ruby NaCl"
+    pattern: "\\b(GroupElement|GroupElements::Curve25519|group.*element|scalar.*mult)"
+    message: "Ruby group element usage detected. Low-level elliptic curve operations - quantum-vulnerable."
+    severity: "medium"
+    crypto_type: "elliptic_curve"
+    algorithm: "Curve25519"
+    pq_replacement: "ML-KEM-768"
+    suggestion: "Group elements use Curve25519 math - plan migration to post-quantum alternatives"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+    metadata:
+      cwe: "CWE-327"
+      library: "rbnacl"
+      quantum_vulnerable: "true"
+      low_level: "true"
+    enabled: true
+    languages: ["ruby"]
+
+  - id: "ruby-self-test-usage"
+    name: "Ruby Self Test Usage"
+    description: "Detects self-test functionality in Ruby NaCl"
+    pattern: "\\b(\\$RBNACL_SELF_TEST|self_test|SelfTest|crypto.*test)"
+    message: "Ruby self-test functionality detected. Good practice - crypto library validation."
+    severity: "info"
+    crypto_type: "test"
+    algorithm: "various"
+    suggestion: "Self-tests validate crypto library functionality - good security practice"
+    references:
+      - "https://github.com/RubyCrypto/rbnacl"
+    metadata:
+      library: "rbnacl"
+      analysis_type: "test_detection"
+    enabled: true
+    languages: ["ruby"]
+
+  # =============================================================================
+  # HARDWARE/PLATFORM NAMING CONTEXT RULES - Prevent False Positives
+  # =============================================================================
+
+  - id: "hardware-device-tree-falcon"
+    name: "Hardware Device Tree FALCON Reference"
+    description: "Detects FALCON in device tree context (not crypto)"
+    pattern: "\\b(lantiq,.*falcon|motorola,.*falcon|compatible.*falcon|of_find_compatible.*falcon|dtb.*falcon|dts.*falcon)"
+    message: "Hardware device tree FALCON reference detected - not cryptographic."
+    severity: "info"
+    crypto_type: "hardware_reference"
+    algorithm: "N/A"
+    suggestion: "This is a hardware/platform reference, not post-quantum cryptography"
+    references:
+      - "https://www.kernel.org/doc/Documentation/devicetree/"
+    metadata:
+      false_positive_mitigation: "true"
+      hardware_context: "true"
+      analysis_type: "context_filter"
+    enabled: true
+    languages: ["c", "devicetree"]
+
+  - id: "hardware-platform-falcon"
+    name: "Hardware Platform FALCON Reference"
+    description: "Detects FALCON in hardware platform context (not crypto)"
+    pattern: "\\b(atari.*falcon|falcon.*ide|falcon.*processor|falcon.*soc|r8a779.*falcon|msm.*falcon)"
+    message: "Hardware platform FALCON reference detected - not cryptographic."
+    severity: "info"
+    crypto_type: "hardware_reference"
+    algorithm: "N/A"
+    suggestion: "This is a hardware/platform reference, not post-quantum cryptography"
+    references:
+      - "https://www.kernel.org/doc/Documentation/admin-guide/devices.txt"
+    metadata:
+      false_positive_mitigation: "true"
+      hardware_context: "true"
+      analysis_type: "context_filter"
+    enabled: true
+    languages: ["c", "makefile", "rst"]
+
+  - id: "hardware-gpu-falcon"
+    name: "Hardware GPU FALCON Reference"
+    description: "Detects FALCON in GPU/firmware context (not crypto)"
+    pattern: "\\b(gpu.*falcon|nvidia.*falcon|sec2.*falcon|gsp.*falcon|firmware.*falcon|falcon.*firmware)"
+    message: "Hardware GPU FALCON reference detected - not cryptographic."
+    severity: "info"
+    crypto_type: "hardware_reference"
+    algorithm: "N/A"
+    suggestion: "This is a GPU/firmware reference, not post-quantum cryptography"
+    references:
+      - "https://nouveau.freedesktop.org/"
+    metadata:
+      false_positive_mitigation: "true"
+      hardware_context: "true"
+      analysis_type: "context_filter"
+    enabled: true
+    languages: ["c", "rst"]
+
+  # =============================================================================
+  # IMPROVED POST-QUANTUM DETECTION RULES
+  # =============================================================================
+
+  - id: "pq-falcon-signature-usage"
+    name: "Post-Quantum FALCON Signature Usage"
+    description: "Detects legitimate FALCON post-quantum signature usage"
+    pattern: "\\b(falcon[-_]?(512|1024)|FALCON[-_]?(512|1024)|oqs.*falcon|liboqs.*falcon|pqcrypto.*falcon)"
+    message: "Post-quantum FALCON signature algorithm detected. Modern quantum-resistant signatures."
+    severity: "info"
+    crypto_type: "post_quantum"
+    algorithm: "FALCON"
+    suggestion: "FALCON provides quantum-resistant digital signatures - good choice for post-quantum cryptography"
+    references:
+      - "https://csrc.nist.gov/Projects/post-quantum-cryptography"
+      - "https://github.com/open-quantum-safe/liboqs"
+    metadata:
+      cwe: "CWE-327"
+      quantum_resistant: "true"
+      nist_pqc: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+  - id: "pq-kyber-kem-usage"
+    name: "Post-Quantum KYBER/ML-KEM Usage"
+    description: "Detects KYBER/ML-KEM key encapsulation mechanism usage"
+    pattern: "\\b(kyber[-_]?(512|768|1024)|KYBER[-_]?(512|768|1024)|ml[-_]?kem|ML[-_]?KEM|oqs.*kyber|liboqs.*kyber)"
+    message: "Post-quantum KYBER/ML-KEM key encapsulation detected. NIST standardized quantum-resistant KEM."
+    severity: "info"
+    crypto_type: "post_quantum"
+    algorithm: "KYBER"
+    suggestion: "KYBER (ML-KEM) provides quantum-resistant key encapsulation - excellent choice for post-quantum cryptography"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/203/final"
+      - "https://github.com/open-quantum-safe/liboqs"
+    metadata:
+      cwe: "CWE-327"
+      quantum_resistant: "true"
+      nist_pqc: "true"
+      fips_203: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+  - id: "pq-dilithium-signature-usage"
+    name: "Post-Quantum DILITHIUM/ML-DSA Usage"
+    description: "Detects DILITHIUM/ML-DSA digital signature usage"
+    pattern: "\\b(dilithium[-_]?(2|3|5)|DILITHIUM[-_]?(2|3|5)|ml[-_]?dsa|ML[-_]?DSA|oqs.*dilithium|liboqs.*dilithium)"
+    message: "Post-quantum DILITHIUM/ML-DSA signature detected. NIST standardized quantum-resistant signatures."
+    severity: "info"
+    crypto_type: "post_quantum"
+    algorithm: "DILITHIUM"
+    suggestion: "DILITHIUM (ML-DSA) provides quantum-resistant digital signatures - excellent choice for post-quantum cryptography"
+    references:
+      - "https://csrc.nist.gov/pubs/fips/204/final"
+      - "https://github.com/open-quantum-safe/liboqs"
+    metadata:
+      cwe: "CWE-327"
+      quantum_resistant: "true"
+      nist_pqc: "true"
+      fips_204: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+  - id: "pq-sphincs-signature-usage"
+    name: "Post-Quantum SPHINCS+ Signature Usage"
+    description: "Detects SPHINCS+ hash-based signature usage"
+    pattern: "\\b(sphincs[-_]?\\+?[-_]?(128|192|256)|SPHINCS[-_]?\\+?[-_]?(128|192|256)|oqs.*sphincs|liboqs.*sphincs)"
+    message: "Post-quantum SPHINCS+ signature detected. Hash-based quantum-resistant signatures."
+    severity: "info"
+    crypto_type: "post_quantum"
+    algorithm: "SPHINCS+"
+    suggestion: "SPHINCS+ provides hash-based quantum-resistant signatures with conservative security assumptions"
+    references:
+      - "https://csrc.nist.gov/Projects/post-quantum-cryptography"
+      - "https://github.com/open-quantum-safe/liboqs"
+    metadata:
+      cwe: "CWE-327"
+      quantum_resistant: "true"
+      nist_pqc: "true"
+      hash_based: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+  - id: "pq-library-imports"
+    name: "Post-Quantum Library Imports"
+    description: "Detects imports of post-quantum cryptography libraries"
+    pattern: "\\b(import.*liboqs|from.*liboqs|import.*oqs|from.*oqs|import.*pqcrypto|from.*pqcrypto|#include.*oqs|#include.*pqcrypto)"
+    message: "Post-quantum cryptography library import detected. Good practice for quantum-resistant implementations."
+    severity: "info"
+    crypto_type: "post_quantum"
+    algorithm: "various"
+    suggestion: "Post-quantum libraries provide quantum-resistant cryptographic implementations"
+    references:
+      - "https://github.com/open-quantum-safe/liboqs"
+      - "https://github.com/rustpq/pqcrypto"
+    metadata:
+      library: "pq_libraries"
+      quantum_resistant: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+  - id: "hybrid-crypto-usage"
+    name: "Hybrid Crypto Usage"
+    description: "Detects hybrid classical+post-quantum cryptography usage"
+    pattern: "\\b(hybrid.*crypto|crypto.*hybrid|classical.*pq|pq.*classical|rsa.*kyber|kyber.*rsa|ecdsa.*dilithium|dilithium.*ecdsa)"
+    message: "Hybrid cryptography usage detected. Combining classical and post-quantum algorithms."
+    severity: "info"
+    crypto_type: "hybrid"
+    algorithm: "various"
+    suggestion: "Hybrid approaches provide migration path and defense-in-depth for post-quantum transition"
+    references:
+      - "https://datatracker.ietf.org/doc/draft-ietf-tls-hybrid-design/"
+      - "https://csrc.nist.gov/Publications/detail/sp/800-56c/rev-2/final"
+    metadata:
+      quantum_resistant: "true"
+      migration_strategy: "true"
+      analysis_type: "positive_detection"
+    enabled: true
+    languages: ["c", "cpp", "go", "python", "java", "rust"]
+
+ast_rules:
+  - id: "go-crypto-import"
+    name: "Go Crypto Package Import"
+    description: "Detects imports of Go crypto packages for analysis"
+    language: "go"
+    pattern: '(import_spec (import_path) @import (#match? @import "crypto/"))'
+    message: "Go crypto package import detected. Review for post-quantum migration opportunities."
+    severity: "info"
+    crypto_type: "import"
+    algorithm: "various"
+    suggestion: "Audit crypto usage and plan migration to post-quantum alternatives"
+    references:
+      - "https://pkg.go.dev/crypto"
+    metadata:
+      analysis_type: "import_detection"
+    enabled: true
+
+  - id: "java-security-provider"
+    name: "Java Security Provider Usage"
+    description: "Detects Java security provider instantiation"
+    language: "java"
+    pattern: '(method_invocation object: (identifier) @obj name: (identifier) @method (#eq? @method "getInstance") arguments: (argument_list (string_literal) @alg))'
+    message: "Java security provider usage detected. Verify algorithm choice for post-quantum readiness."
+    severity: "info"
+    crypto_type: "provider"
+    algorithm: "various"
+    suggestion: "Consider Bouncy Castle PQC provider for post-quantum algorithms"
+    references:
+      - "https://www.bouncycastle.org/specifications.html"
+    metadata:
+      analysis_type: "provider_detection"
+    enabled: true 

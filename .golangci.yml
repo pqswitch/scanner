@@ -1,0 +1,120 @@
+version: 2
+
+run:
+  timeout: 10m
+  tests: true
+  modules-download-mode: readonly
+  go: "1.24.3"
+  skip-dirs:
+    - ml-training/repos
+    - ml-training/storage
+    - ml-training/training
+
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+
+linters-settings:
+  govet:
+    enable-all: true
+  gocyclo:
+    min-complexity: 35  # Increase to reduce noise from test files
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    locale: US
+  lll:
+    line-length: 120
+  goimports:
+    local-prefixes: github.com/pqswitch/scanner
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport # https://github.com/go-critic/go-critic/issues/845
+      - ifElseChain
+      - octalLiteral
+      - whyNoLint
+      - wrapperFunc
+      - elseif  # Disable elseif suggestions
+
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - dogsled
+    - dupl
+    - errcheck
+    - exhaustive
+    - gocritic
+    - gocyclo
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - staticcheck
+    - unconvert
+    - unused
+    - whitespace
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - exhaustive
+        - gocyclo  # Test functions can be complex
+        - gosec    # Tests may use subprocess calls
+    - path: test/crypto_rules/
+      linters:
+        - gocyclo  # Crypto test functions are inherently complex
+        - gosec    # Test runner needs subprocess calls
+    - path: examples/
+      linters:
+        - gosec  # Examples may intentionally use weak crypto for demonstration
+    - path: examples/demo_app/
+      linters:
+        - gosec  # Demo app intentionally uses weak crypto to test the scanner
+        - unused
+    - path: internal/
+      text: "weak cryptographic primitive"
+      linters:
+        - gosec
+    - text: "don't use `init` function"
+      linters:
+        - gochecknoinits
+    - text: "G304: Potential file inclusion via variable"
+      linters:
+        - gosec  # File paths from user input are expected in a CLI tool
+    - text: "G306: Expect WriteFile permissions to be 0600 or less"
+      linters:
+        - gosec  # 0644 is reasonable for many output files
+    - text: "G301: Expect directory permissions to be 0750 or less"
+      linters:
+        - gosec  # 0755 is standard for directories
+    - text: "G204: Subprocess launched with"
+      linters:
+        - gosec  # CLI tools and test runners need subprocess calls
+    - text: "ifElseChain: rewrite if-else to switch statement"
+      linters:
+        - gocritic  # if-else chains are often more readable than switch statements
+    - text: "elseif: can replace 'else {if cond {}}' with 'else if cond {}'"
+      linters:
+        - gocritic  # Sometimes else-if is less readable
+  exclude-use-default: false
+  max-issues-per-linter: 50  # Limit issues per linter to avoid noise
+  max-same-issues: 10 

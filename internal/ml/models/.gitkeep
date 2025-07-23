@@ -1,0 +1,2 @@
+# This file ensures the models directory exists for embedded ML models
+# Trained models will be placed here during CI/CD build process 

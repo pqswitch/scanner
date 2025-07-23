@@ -1,0 +1,253 @@
+name: 'PQSwitch Scanner'
+description: 'Scan for classical cryptographic implementations that need post-quantum migration'
+author: 'PQSwitch Team'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  path:
+    description: 'Path to scan (default: current directory)'
+    required: false
+    default: '.'
+  
+  output-format:
+    description: 'Output format: json, sarif, html'
+    required: false
+    default: 'sarif'
+  
+  output-file:
+    description: 'Output file path'
+    required: false
+    default: 'pqswitch-results.sarif'
+  
+  rules-path:
+    description: 'Custom rules directory path'
+    required: false
+    default: ''
+  
+  fail-on-findings:
+    description: 'Fail the action if findings are detected'
+    required: false
+    default: 'false'
+  
+  severity-threshold:
+    description: 'Minimum severity to report (info, low, medium, high, critical)'
+    required: false
+    default: 'medium'
+  
+  upload-sarif:
+    description: 'Upload SARIF results to GitHub Security tab'
+    required: false
+    default: 'true'
+  
+  generate-pr:
+    description: 'Generate pull request with migration patches'
+    required: false
+    default: 'false'
+
+outputs:
+  results-file:
+    description: 'Path to the results file'
+    value: ${{ steps.scan.outputs.results-file }}
+  
+  findings-count:
+    description: 'Number of findings detected'
+    value: ${{ steps.scan.outputs.findings-count }}
+  
+  risk-score:
+    description: 'Overall risk score (0-100)'
+    value: ${{ steps.scan.outputs.risk-score }}
+  
+  scan-status:
+    description: 'Scan completion status'
+    value: ${{ steps.scan.outputs.scan-status }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup PQSwitch Scanner
+      shell: bash
+      run: |
+        echo "Setting up PQSwitch Scanner..."
+        
+        # Download and install the scanner binary
+        SCANNER_VERSION="v1.0.0"
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        
+        case $ARCH in
+          x86_64) ARCH="amd64" ;;
+          aarch64) ARCH="arm64" ;;
+          armv7l) ARCH="arm" ;;
+        esac
+        
+        DOWNLOAD_URL="https://github.com/pqswitch/scanner/releases/download/${SCANNER_VERSION}/pqswitch-${OS}-${ARCH}"
+        
+        echo "Downloading from: $DOWNLOAD_URL"
+        curl -L -o pqswitch "$DOWNLOAD_URL"
+        chmod +x pqswitch
+        
+        # Verify installation
+        ./pqswitch --version
+    
+    - name: Run PQSwitch Scan
+      id: scan
+      shell: bash
+      run: |
+        echo "Running PQSwitch scan..."
+        
+        # Prepare scan command
+        SCAN_CMD="./pqswitch scan"
+        SCAN_CMD="$SCAN_CMD --output=${{ inputs.output-format }}"
+        
+        if [ -n "${{ inputs.output-file }}" ]; then
+          SCAN_CMD="$SCAN_CMD --output-file=${{ inputs.output-file }}"
+        fi
+        
+        if [ -n "${{ inputs.rules-path }}" ]; then
+          SCAN_CMD="$SCAN_CMD --rules=${{ inputs.rules-path }}"
+        fi
+        
+        SCAN_CMD="$SCAN_CMD ${{ inputs.path }}"
+        
+        echo "Executing: $SCAN_CMD"
+        
+        # Run the scan and capture output
+        if $SCAN_CMD > scan_output.log 2>&1; then
+          SCAN_STATUS="success"
+        else
+          SCAN_STATUS="failed"
+          echo "Scan failed. Output:"
+          cat scan_output.log
+        fi
+        
+        # Extract metrics from output if available
+        FINDINGS_COUNT=0
+        RISK_SCORE=0
+        
+        if [ -f "${{ inputs.output-file }}" ]; then
+          # Try to extract metrics from JSON/SARIF output
+          if command -v jq >/dev/null 2>&1; then
+            if [ "${{ inputs.output-format }}" = "json" ]; then
+              FINDINGS_COUNT=$(jq -r '.summary.total_findings // 0' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+              RISK_SCORE=$(jq -r '.summary.risk_score // 0' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+            elif [ "${{ inputs.output-format }}" = "sarif" ]; then
+              FINDINGS_COUNT=$(jq -r '.runs[0].results | length' "${{ inputs.output-file }}" 2>/dev/null || echo "0")
+            fi
+          fi
+        fi
+        
+        # Set outputs
+        echo "results-file=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
+        echo "findings-count=$FINDINGS_COUNT" >> $GITHUB_OUTPUT
+        echo "risk-score=$RISK_SCORE" >> $GITHUB_OUTPUT
+        echo "scan-status=$SCAN_STATUS" >> $GITHUB_OUTPUT
+        
+        # Print summary
+        echo "## PQSwitch Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: $SCAN_STATUS" >> $GITHUB_STEP_SUMMARY
+        echo "- **Findings**: $FINDINGS_COUNT" >> $GITHUB_STEP_SUMMARY
+        echo "- **Risk Score**: $RISK_SCORE/100" >> $GITHUB_STEP_SUMMARY
+        echo "- **Output File**: ${{ inputs.output-file }}" >> $GITHUB_STEP_SUMMARY
+        
+        # Check if we should fail on findings
+        if [ "${{ inputs.fail-on-findings }}" = "true" ] && [ "$FINDINGS_COUNT" -gt 0 ]; then
+          echo "❌ Failing due to detected cryptographic findings"
+          exit 1
+        fi
+    
+    - name: Upload SARIF Results
+      if: inputs.upload-sarif == 'true' && inputs.output-format == 'sarif'
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.output-file }}
+        category: pqswitch-scanner
+      continue-on-error: true
+    
+    - name: Upload Results Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pqswitch-results
+        path: |
+          ${{ inputs.output-file }}
+          scan_output.log
+        retention-days: 30
+      continue-on-error: true
+    
+    - name: Generate Migration PR
+      if: inputs.generate-pr == 'true' && steps.scan.outputs.findings-count > 0
+      shell: bash
+      run: |
+        echo "Generating migration patches..."
+        
+        # Generate patches
+        ./pqswitch generate patch ${{ inputs.path }}
+        
+        # Check if patches were generated
+        if [ -d ".pqswitch/patches" ] && [ "$(ls -A .pqswitch/patches)" ]; then
+          echo "✅ Migration patches generated in .pqswitch/patches/"
+          
+          # Create a summary of patches
+          echo "## 🔧 Generated Migration Patches" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following patches have been generated to help migrate to post-quantum cryptography:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for patch in .pqswitch/patches/*.patch; do
+            if [ -f "$patch" ]; then
+              echo "- $(basename "$patch")" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Review these patches and apply them manually or create a pull request." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "ℹ️ No migration patches were generated"
+        fi
+      continue-on-error: true
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request' && steps.scan.outputs.findings-count > 0
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const findingsCount = '${{ steps.scan.outputs.findings-count }}';
+          const riskScore = '${{ steps.scan.outputs.risk-score }}';
+          const resultsFile = '${{ steps.scan.outputs.results-file }}';
+          
+          const riskLevel = riskScore > 70 ? '🔴 High' : riskScore > 40 ? '🟡 Medium' : '🟢 Low';
+          
+          const comment = `## 🔐 PQSwitch Scanner Results
+          
+          **Post-Quantum Cryptography Analysis Complete**
+          
+          - **Findings**: ${findingsCount} cryptographic issues detected
+          - **Risk Level**: ${riskLevel} (${riskScore}/100)
+          - **Report**: [View detailed results](${resultsFile})
+          
+          ${findingsCount > 0 ? '⚠️ **Action Required**: Review the detected cryptographic implementations for post-quantum migration.' : '✅ **No issues detected**: Your code appears to be using secure cryptographic implementations.'}
+          
+          ### Next Steps
+          ${findingsCount > 0 ? `
+          1. Review the detailed findings in the Security tab
+          2. Prioritize migration based on risk scores
+          3. Consider implementing hybrid solutions
+          4. Update your cryptographic dependencies
+          ` : `
+          1. Continue monitoring for new vulnerabilities
+          2. Stay informed about post-quantum standards
+          3. Consider crypto-agility in new development
+          `}
+          
+          ---
+          *Generated by [PQSwitch Scanner](https://github.com/pqswitch/scanner)*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+      continue-on-error: true 

@@ -1,0 +1,123 @@
+version: 2
+
+project_name: pqswitch
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: pqswitch
+    main: ./cmd/pqswitch
+    binary: pqswitch
+    
+    env:
+      - CGO_ENABLED=0
+      
+    goos:
+      - linux
+      - darwin
+      - windows
+      
+    goarch:
+      - amd64
+      - arm64
+      
+    # Skip some combinations
+    ignore:
+      - goos: windows
+        goarch: arm64
+        
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: pqswitch
+    builds:
+      - pqswitch
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE*
+      - .pqswitch.yaml
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^build:'
+      - 'merge conflict'
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: 'Security updates'
+      regexp: '^.*?sec(\(.+\))??!?:.+$'
+      order: 1
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 2
+    - title: 'Performance improvements'
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 3
+    - title: 'Other work'
+      order: 999
+
+release:
+  github:
+    owner: pqswitch
+    name: scanner
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  prerelease: auto
+  make_latest: true
+  
+# Docker images (optional - will be skipped if credentials not available)
+dockers:
+  - image_templates:
+      - "pqswitch/scanner:{{ .Version }}-amd64"
+      - "pqswitch/scanner:latest-amd64"
+    dockerfile: build/docker/Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+    skip_push: auto
+
+# Docker manifests (optional)
+docker_manifests:
+  - name_template: "pqswitch/scanner:{{ .Version }}"
+    image_templates:
+      - "pqswitch/scanner:{{ .Version }}-amd64"
+    skip_push: auto
+  - name_template: "pqswitch/scanner:latest"
+    image_templates:
+      - "pqswitch/scanner:latest-amd64"
+    skip_push: auto
+
+# GitHub
+gitea_urls:
+  api: https://api.github.com/
+  download: https://github.com/ 
