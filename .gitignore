@@ -20,13 +20,12 @@ coverage.html
 go.work
 
 # Build artifacts
-build/
+build/*
 dist/
 bin/
 
 # But allow Docker files
 !build/docker/
-!build/docker/Dockerfile
 
 # IDE and editor files
 .vscode/
