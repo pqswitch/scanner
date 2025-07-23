@@ -1,14 +1,6 @@
 {
-  "training_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "training_timestamp": "2025-07-23T21:07:42Z",
   "models_generated": [
-    {
-      "name": "feature_metadata",
-      "type": "linear_regression",
-      "version": "1.0",
-      "features": 8,
-      "size_bytes": 850,
-      "metadata": {}
-    },
     {
       "name": "models",
       "type": "linear_regression",
@@ -20,6 +12,14 @@
         "training_samples": 1000,
         "architecture": "go_embedded"
       }
+    },
+    {
+      "name": "feature_metadata",
+      "type": "linear_regression",
+      "version": "1.0",
+      "features": 8,
+      "size_bytes": 850,
+      "metadata": {}
     }
   ],
   "total_size_bytes": 5276,
