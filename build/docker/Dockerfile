@@ -17,7 +17,8 @@ RUN mkdir -p /app /usr/local/share/pqswitch
 # Copy the pre-built binary from GoReleaser
 COPY pqswitch /usr/local/bin/pqswitch-bin
 
-# Create rules directory (empty for now, will be populated by app)
+# Copy the crypto detection rules
+COPY internal/scanner/rules/ /app/internal/scanner/rules/
 RUN mkdir -p /usr/local/share/pqswitch/rules
 
 # Create optimized wrapper script
@@ -46,6 +47,9 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo '    echo "  include_source: true" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
     echo '    echo "  verbose: false" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
     echo 'fi' >> /usr/local/bin/pqswitch && \
+    echo '' >> /usr/local/bin/pqswitch && \
+    echo '# Set working directory to app root (for rules path)' >> /usr/local/bin/pqswitch && \
+    echo 'cd /app' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Clean up known false positives' >> /usr/local/bin/pqswitch && \
     echo 'find . -name "*.yaml" -path "*/scanner/rules/*" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
