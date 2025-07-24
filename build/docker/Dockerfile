@@ -75,5 +75,6 @@ WORKDIR /workspace
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD /usr/local/bin/pqswitch-bin --version || exit 1
 
-# Default command
-CMD ["/usr/local/bin/pqswitch", "--help"] 
+# Use same structure as old working image
+ENTRYPOINT ["/bin/sh"]
+CMD ["-c", "pqswitch --help"] 
