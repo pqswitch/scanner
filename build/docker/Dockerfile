@@ -1,11 +1,15 @@
 # GoReleaser Dockerfile - uses pre-built binary
 FROM alpine:latest
 
-# Install only essential runtime dependencies
+# Install runtime dependencies including AWS CLI
 RUN apk add --no-cache \
     ca-certificates \
     git \
     bash \
+    curl \
+    python3 \
+    py3-pip \
+    && pip3 install --no-cache-dir awscli \
     && rm -rf /var/cache/apk/*
 
 # Create non-root user
