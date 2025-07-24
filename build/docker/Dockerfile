@@ -32,21 +32,19 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo 'if [ ! -f "$CONFIG_FILE" ]; then' >> /usr/local/bin/pqswitch && \
     echo '    echo "Creating default config..."' >> /usr/local/bin/pqswitch && \
     echo '    mkdir -p "$(dirname "$CONFIG_FILE")"' >> /usr/local/bin/pqswitch && \
-    echo '    cat > "$CONFIG_FILE" << EOF' >> /usr/local/bin/pqswitch && \
-    echo 'scanner:' >> /usr/local/bin/pqswitch && \
-    echo '  max_file_size: 10485760' >> /usr/local/bin/pqswitch && \
-    echo '  parallel: 4' >> /usr/local/bin/pqswitch && \
-    echo '  enable_ast: false  # Disabled for Docker' >> /usr/local/bin/pqswitch && \
-    echo '  ignore_patterns:' >> /usr/local/bin/pqswitch && \
-    echo '    - "vendor/*"' >> /usr/local/bin/pqswitch && \
-    echo '    - "node_modules/*"' >> /usr/local/bin/pqswitch && \
-    echo '    - "*.test.go"' >> /usr/local/bin/pqswitch && \
-    echo '    - ".git/*"' >> /usr/local/bin/pqswitch && \
-    echo 'output:' >> /usr/local/bin/pqswitch && \
-    echo '  default_format: "json"' >> /usr/local/bin/pqswitch && \
-    echo '  include_source: true' >> /usr/local/bin/pqswitch && \
-    echo '  verbose: false' >> /usr/local/bin/pqswitch && \
-    echo 'EOF' >> /usr/local/bin/pqswitch && \
+    echo '    echo "scanner:" > "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  max_file_size: 10485760" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  parallel: 4" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  enable_ast: false  # Disabled for Docker" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  ignore_patterns:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"vendor/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"node_modules/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"*.test.go\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \".git/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "output:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  default_format: \"json\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  include_source: true" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  verbose: false" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
     echo 'fi' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Clean up known false positives' >> /usr/local/bin/pqswitch && \
