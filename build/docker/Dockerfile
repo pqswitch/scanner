@@ -7,10 +7,10 @@ RUN apk add --no-cache git build-base
 # Set working directory
 WORKDIR /app
 
-# Copy go mod files
+# Copy go mod files first for better caching
 COPY go.mod go.sum ./
 
-# Download dependencies
+# Download dependencies (cached layer)
 RUN go mod download
 
 # Copy source code
@@ -20,18 +20,29 @@ COPY . .
 ARG VERSION=dev
 ENV VERSION=${VERSION}
 
-# Build the application
-RUN CGO_ENABLED=1 go build -ldflags="-s -w -X main.version=${VERSION}" -o pqswitch ./cmd/pqswitch
+# Build argument for target architecture
+ARG TARGETARCH
+ARG TARGETOS
 
-# Final stage
+# Conditionally enable CGO based on architecture
+# Use CGO for native builds, disable for cross-compilation to avoid hanging
+RUN if [ "$TARGETARCH" = "amd64" ] && [ "$TARGETOS" = "linux" ]; then \
+        echo "Building with CGO enabled for native linux/amd64"; \
+        CGO_ENABLED=1 go build -ldflags="-s -w -X main.version=${VERSION}" -o pqswitch ./cmd/pqswitch; \
+    else \
+        echo "Building with CGO disabled for cross-compilation ($TARGETOS/$TARGETARCH)"; \
+        CGO_ENABLED=0 go build -tags nocgo -ldflags="-s -w -X main.version=${VERSION}" -o pqswitch ./cmd/pqswitch; \
+    fi
+
+# Final stage - minimal runtime image
 FROM alpine:latest
 
-# Install runtime dependencies
+# Install only essential runtime dependencies
 RUN apk add --no-cache \
     ca-certificates \
     git \
-    aws-cli \
-    bash
+    bash \
+    && rm -rf /var/cache/apk/*
 
 # Create non-root user
 RUN addgroup -S pqswitch && adduser -S pqswitch -G pqswitch
@@ -46,100 +57,87 @@ COPY --from=builder /app/pqswitch /usr/local/bin/pqswitch-bin
 COPY --from=builder /app/internal/scanner/rules /usr/local/share/pqswitch/rules
 COPY --from=builder /app/.pqswitch.yaml /usr/local/share/pqswitch/.pqswitch.yaml
 
-# Create a wrapper script that explicitly filters out false positives and handles ignore patterns
-RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
-    echo 'set -e' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Debug info' >> /usr/local/bin/pqswitch && \
-    echo 'echo "=== PQSwitch Enhanced Wrapper Starting ==="' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Current directory: $(pwd)"' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Home directory: $HOME"' >> /usr/local/bin/pqswitch && \
-    echo 'echo "User: $(whoami)"' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Config file exists: $(test -f $HOME/.pqswitch.yaml && echo yes || echo no)"' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Rules source exists: $(test -d /usr/local/share/pqswitch/rules && echo yes || echo no)"' >> /usr/local/bin/pqswitch && \
-    echo 'if [ -f "$HOME/.pqswitch.yaml" ]; then' >> /usr/local/bin/pqswitch && \
-    echo '    echo "Config file preview:"' >> /usr/local/bin/pqswitch && \
-    echo '    head -15 "$HOME/.pqswitch.yaml"' >> /usr/local/bin/pqswitch && \
-    echo 'fi' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Command arguments: $@"' >> /usr/local/bin/pqswitch && \
-    echo 'echo "=== Starting Scan ==="' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Create temporary filtered scan results' >> /usr/local/bin/pqswitch && \
-    echo 'TEMP_OUTPUT="/tmp/scan_output_$(date +%s).json"' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Create the expected directory structure as fallback' >> /usr/local/bin/pqswitch && \
-    echo 'mkdir -p ./internal/scanner' >> /usr/local/bin/pqswitch && \
-    echo 'if [ -d "/usr/local/share/pqswitch/rules" ]; then' >> /usr/local/bin/pqswitch && \
-    echo '    cp -r /usr/local/share/pqswitch/rules ./internal/scanner/rules' >> /usr/local/bin/pqswitch && \
-    echo '    echo "Rules copied to fallback location"' >> /usr/local/bin/pqswitch && \
-    echo 'fi' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Pre-filter the directory to exclude false positive files' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Pre-filtering false positive files..."' >> /usr/local/bin/pqswitch && \
-    echo 'find . -name "*.yaml" -path "*/scanner/rules/*" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
-    echo 'find . -name "*.yml" -path "*/scanner/rules/*" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
-    echo 'find . -path "*/.git/hooks/*" -name "*.sample" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
-    echo '# Remove package management lock files (dependency metadata, not source code)' >> /usr/local/bin/pqswitch && \
-    echo 'rm -f ./package-lock.json ./pnpm-lock.yaml ./yarn.lock ./Cargo.lock ./Pipfile.lock ./poetry.lock ./go.sum ./composer.lock ./Gemfile.lock 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
-    echo 'echo "False positive files and lock files removed"' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Run the scanner' >> /usr/local/bin/pqswitch && \
-    echo 'echo "Running: /usr/local/bin/pqswitch-bin --config $HOME/.pqswitch.yaml $@"' >> /usr/local/bin/pqswitch && \
-    echo '/usr/local/bin/pqswitch-bin --config "$HOME/.pqswitch.yaml" "$@"' >> /usr/local/bin/pqswitch && \
-    chmod +x /usr/local/bin/pqswitch
+# Create optimized wrapper script
+RUN cat << 'EOF' > /usr/local/bin/pqswitch
+#!/bin/bash
+set -e
 
-# Create config in the correct location that the application expects
-RUN echo 'scanner:' > /home/pqswitch/.pqswitch.yaml && \
-    echo '  max_file_size: 10485760' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  parallel: 4' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  ignore_patterns:' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "vendor/*"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "node_modules/*"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "*.test.go"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - ".git/*"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "internal/scanner/rules/*"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "internal/scanner/enhanced_rules.yaml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "**/rules/*.yaml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "**/rules/*.yml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "*.rules.yaml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "*.rules.yml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "**/scanner/rules/*"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "**/*scanner*/**/*.yaml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "**/*scanner*/**/*.yml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    # Package management lock files (contain dependency metadata, not source code)' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "package-lock.json"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "pnpm-lock.yaml"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "yarn.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "Cargo.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "Pipfile.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "poetry.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "go.sum"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "composer.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '    - "Gemfile.lock"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo 'rules:' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  default_rules_path: "/usr/local/share/pqswitch/rules"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo 'output:' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  default_format: "json"' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  include_source: true' >> /home/pqswitch/.pqswitch.yaml && \
-    echo '  verbose: false' >> /home/pqswitch/.pqswitch.yaml
+# Configuration
+CONFIG_FILE="$HOME/.pqswitch.yaml"
+RULES_DIR="/usr/local/share/pqswitch/rules"
 
-# Set up proper ownership
+# Ensure config exists
+if [ ! -f "$CONFIG_FILE" ]; then
+    cp /usr/local/share/pqswitch/.pqswitch.yaml "$CONFIG_FILE"
+fi
+
+# Create rules fallback if needed
+if [ ! -d "./internal/scanner/rules" ] && [ -d "$RULES_DIR" ]; then
+    mkdir -p ./internal/scanner
+    cp -r "$RULES_DIR" ./internal/scanner/rules
+fi
+
+# Clean up known false positives
+find . -name "*.yaml" -path "*/scanner/rules/*" -delete 2>/dev/null || true
+find . -name "*.yml" -path "*/scanner/rules/*" -delete 2>/dev/null || true
+
+# Remove package lock files (dependency metadata, not source code)
+rm -f ./package-lock.json ./pnpm-lock.yaml ./yarn.lock ./Cargo.lock \
+      ./Pipfile.lock ./poetry.lock ./go.sum ./composer.lock ./Gemfile.lock 2>/dev/null || true
+
+# Run the scanner
+exec /usr/local/bin/pqswitch-bin --config "$CONFIG_FILE" "$@"
+EOF
+
+# Make wrapper executable
+RUN chmod +x /usr/local/bin/pqswitch
+
+# Create runtime configuration
+RUN cat << 'EOF' > /home/pqswitch/.pqswitch.yaml
+scanner:
+  max_file_size: 10485760
+  parallel: 4
+  enable_ast: false  # Disabled for Docker to avoid tree-sitter issues
+  ignore_patterns:
+    - "vendor/*"
+    - "node_modules/*"
+    - "*.test.go"
+    - ".git/*"
+    - "internal/scanner/rules/*"
+    - "**/rules/*.yaml"
+    - "**/rules/*.yml"
+    - "package-lock.json"
+    - "pnpm-lock.yaml"
+    - "yarn.lock"
+    - "Cargo.lock"
+    - "Pipfile.lock"
+    - "poetry.lock"
+    - "go.sum"
+    - "composer.lock"
+    - "Gemfile.lock"
+
+rules:
+  default_rules_path: "/usr/local/share/pqswitch/rules"
+
+output:
+  default_format: "json"
+  include_source: true
+  verbose: false
+EOF
+
+# Set proper ownership
 RUN chown -R pqswitch:pqswitch /app /usr/local/share/pqswitch /home/pqswitch/.pqswitch.yaml && \
     chown pqswitch:pqswitch /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin
 
 # Switch to non-root user
 USER pqswitch
 
-# Set environment variables
-ENV PQSWITCH_RULES_PATH=/usr/local/share/pqswitch/rules
-
-# Set working directory
+# Set working directory for scans
 WORKDIR /tmp/workspace
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD pqswitch --version || exit 1
+    CMD /usr/local/bin/pqswitch-bin --version || exit 1
 
-# Default entrypoint
-ENTRYPOINT ["/bin/sh"]
-CMD ["-c", "pqswitch --help"] 
+# Default command
+CMD ["/usr/local/bin/pqswitch", "--help"] 
