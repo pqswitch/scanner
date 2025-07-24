@@ -105,4 +105,5 @@ jobs:
         if [ "${{ steps.docker-creds.outputs.available }}" = "true" ]; then
           echo "Docker images have been published to Docker Hub." >> $GITHUB_STEP_SUMMARY
         else
-          echo "Docker images were skipped (no credentials)." >> $GITHUB_STEP_SUMMARY 
+          echo "Docker images were skipped (no credentials)." >> $GITHUB_STEP_SUMMARY
+        fi
