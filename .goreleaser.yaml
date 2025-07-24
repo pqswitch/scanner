@@ -98,6 +98,8 @@ dockers:
       - "pqswitch/scanner:latest-amd64"
     dockerfile: build/docker/Dockerfile
     use: buildx
+    extra_files:
+      - internal/scanner/rules/
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--label=org.opencontainers.image.created={{.Date}}"
