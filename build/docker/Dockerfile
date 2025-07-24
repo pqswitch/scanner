@@ -25,7 +25,7 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo 'set -e' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Configuration' >> /usr/local/bin/pqswitch && \
-    echo 'CONFIG_FILE="$HOME/.pqswitch.yaml"' >> /usr/local/bin/pqswitch && \
+    echo 'CONFIG_FILE="/tmp/.pqswitch.yaml"' >> /usr/local/bin/pqswitch && \
     echo 'RULES_DIR="/usr/local/share/pqswitch/rules"' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Create default config if needed' >> /usr/local/bin/pqswitch && \
@@ -52,8 +52,7 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo 'find . -name "*.yml" -path "*/scanner/rules/*" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Remove package lock files (dependency metadata, not source code)' >> /usr/local/bin/pqswitch && \
-    echo 'rm -f ./package-lock.json ./pnpm-lock.yaml ./yarn.lock ./Cargo.lock \\' >> /usr/local/bin/pqswitch && \
-    echo '      ./Pipfile.lock ./poetry.lock ./go.sum ./composer.lock ./Gemfile.lock 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
+    echo 'rm -f ./package-lock.json ./pnpm-lock.yaml ./yarn.lock ./Cargo.lock ./Pipfile.lock ./poetry.lock ./go.sum ./composer.lock ./Gemfile.lock 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Run the scanner' >> /usr/local/bin/pqswitch && \
     echo 'exec /usr/local/bin/pqswitch-bin --config "$CONFIG_FILE" "$@"' >> /usr/local/bin/pqswitch
@@ -61,15 +60,16 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
 # Make wrapper and binary executable
 RUN chmod +x /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin
 
-# Set proper ownership
+# Set proper ownership (keeping pqswitch user available for when needed)
 RUN chown -R pqswitch:pqswitch /app /usr/local/share/pqswitch && \
-    chown pqswitch:pqswitch /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin
+    chown pqswitch:pqswitch /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin && \
+    chmod 755 /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin
 
-# Switch to non-root user
-USER pqswitch
+# Run as root for ECS compatibility (ECS handles security isolation)
+# USER pqswitch
 
 # Set working directory for scans
-WORKDIR /tmp/workspace
+WORKDIR /workspace
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
