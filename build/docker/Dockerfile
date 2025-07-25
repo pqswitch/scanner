@@ -24,6 +24,7 @@ COPY pqswitch /usr/local/bin/pqswitch-bin
 # Copy the crypto detection rules
 COPY internal/scanner/rules/ /app/internal/scanner/rules/
 RUN mkdir -p /usr/local/share/pqswitch/rules
+COPY internal/scanner/rules/ /usr/local/share/pqswitch/rules/
 
 # Create optimized wrapper script
 RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
@@ -38,18 +39,28 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo '    echo "Creating default config..."' >> /usr/local/bin/pqswitch && \
     echo '    mkdir -p "$(dirname "$CONFIG_FILE")"' >> /usr/local/bin/pqswitch && \
     echo '    echo "scanner:" > "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo "  max_file_size: 10485760" >> "$CONFIG_FILE" && \
-    echo "  parallel: 4" >> "$CONFIG_FILE" && \
-    echo "  enable_ast: false  # Disabled for Docker" >> "$CONFIG_FILE" && \
-    echo "  ignore_patterns:" >> "$CONFIG_FILE" && \
-    echo "    - \"vendor/*\"" >> "$CONFIG_FILE" && \
-    echo "    - \"node_modules/*\"" >> "$CONFIG_FILE" && \
-    echo "    - \"*.test.go\"" >> "$CONFIG_FILE" && \
-    echo "    - \".git/*\"" >> "$CONFIG_FILE" && \
-    echo "output:" >> "$CONFIG_FILE" && \
-    echo "  default_format: \"json\"" >> "$CONFIG_FILE" && \
-    echo "  include_source: true" >> "$CONFIG_FILE" && \
-    echo "  verbose: false" >> "$CONFIG_FILE" && \
+    echo '    echo "  max_file_size: 10485760" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  parallel: 4" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  enable_ast: false  # Disabled for Docker" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  ignore_patterns:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"vendor/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"node_modules/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \"*.test.go\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "    - \".git/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "output:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  default_format: \"json\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  include_source: true" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo '    echo "  verbose: false" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo 'fi' >> /usr/local/bin/pqswitch && \
+    echo '' >> /usr/local/bin/pqswitch && \
+    echo '# Create the expected directory structure as fallback' >> /usr/local/bin/pqswitch && \
+    echo 'mkdir -p ./internal/scanner' >> /usr/local/bin/pqswitch && \
+    echo 'if [ -d "/usr/local/share/pqswitch/rules" ]; then' >> /usr/local/bin/pqswitch && \
+    echo '    cp -r /usr/local/share/pqswitch/rules ./internal/scanner/rules 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
+    echo '    echo "Rules copied to fallback location"' >> /usr/local/bin/pqswitch && \
+    echo 'elif [ -d "/app/internal/scanner/rules" ]; then' >> /usr/local/bin/pqswitch && \
+    echo '    cp -r /app/internal/scanner/rules ./internal/scanner/rules 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
+    echo '    echo "Rules copied from app location"' >> /usr/local/bin/pqswitch && \
     echo 'fi' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Clean up known false positives' >> /usr/local/bin/pqswitch && \
