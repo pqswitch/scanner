@@ -38,22 +38,19 @@ RUN echo '#!/bin/bash' > /usr/local/bin/pqswitch && \
     echo '    echo "Creating default config..."' >> /usr/local/bin/pqswitch && \
     echo '    mkdir -p "$(dirname "$CONFIG_FILE")"' >> /usr/local/bin/pqswitch && \
     echo '    echo "scanner:" > "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  max_file_size: 10485760" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  parallel: 4" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  enable_ast: false  # Disabled for Docker" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  ignore_patterns:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "    - \"vendor/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "    - \"node_modules/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "    - \"*.test.go\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "    - \".git/*\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "output:" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  default_format: \"json\"" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  include_source: true" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
-    echo '    echo "  verbose: false" >> "$CONFIG_FILE"' >> /usr/local/bin/pqswitch && \
+    echo "  max_file_size: 10485760" >> "$CONFIG_FILE" && \
+    echo "  parallel: 4" >> "$CONFIG_FILE" && \
+    echo "  enable_ast: false  # Disabled for Docker" >> "$CONFIG_FILE" && \
+    echo "  ignore_patterns:" >> "$CONFIG_FILE" && \
+    echo "    - \"vendor/*\"" >> "$CONFIG_FILE" && \
+    echo "    - \"node_modules/*\"" >> "$CONFIG_FILE" && \
+    echo "    - \"*.test.go\"" >> "$CONFIG_FILE" && \
+    echo "    - \".git/*\"" >> "$CONFIG_FILE" && \
+    echo "output:" >> "$CONFIG_FILE" && \
+    echo "  default_format: \"json\"" >> "$CONFIG_FILE" && \
+    echo "  include_source: true" >> "$CONFIG_FILE" && \
+    echo "  verbose: false" >> "$CONFIG_FILE" && \
     echo 'fi' >> /usr/local/bin/pqswitch && \
-    echo '' >> /usr/local/bin/pqswitch && \
-    echo '# Set working directory to app root (for rules path)' >> /usr/local/bin/pqswitch && \
-    echo 'cd /app' >> /usr/local/bin/pqswitch && \
     echo '' >> /usr/local/bin/pqswitch && \
     echo '# Clean up known false positives' >> /usr/local/bin/pqswitch && \
     echo 'find . -name "*.yaml" -path "*/scanner/rules/*" -delete 2>/dev/null || true' >> /usr/local/bin/pqswitch && \
