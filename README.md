@@ -106,36 +106,38 @@ pqswitch enhanced-scan . --enable-ml --min-confidence 0.3
 - **Continuous Learning**: Models improve with more training data
 - **AI-Powered Evaluation**: OpenAI integration for complex analysis
 
-## 🐳 Docker Image Variants
+## 🐳 Docker Image
 
-We provide **three Docker image variants** optimized for different use cases:
+We provide a **comprehensive Docker image** optimized for all use cases:
 
-### **Lite Image** (~50MB) - Crypto-only scanning
+### **PQSwitch Scanner** (~60MB) - Complete crypto security scanner
 ```bash
-docker pull pqswitch/scanner:lite
-docker run --rm -v $(pwd):/workspace pqswitch/scanner:lite scan /workspace
-```
-- Core crypto pattern detection
-- Minimal dependencies
-- **Best for**: Fast CI/CD scans, basic crypto detection
+# Pull the latest image
+docker pull pqswitch/scanner:latest
 
-### **Standard Image** (~200MB) - Includes common tools
-```bash
-docker pull pqswitch/scanner:standard  # Default :latest tag
-docker run --rm -v $(pwd):/workspace pqswitch/scanner:standard enhanced-scan --include-deps /workspace
-```
-- Core crypto detection + dependency scanning
-- Common package managers (npm, pip, cargo, go mod)
-- **Best for**: Most development workflows, comprehensive scans
+# Quick crypto scan
+docker run --rm -v $(pwd):/workspace pqswitch/scanner:latest scan /workspace
 
-### **Full Image** (~500MB) - Complete security suite
-```bash
-docker pull pqswitch/scanner:full
-docker run --rm -v $(pwd):/workspace pqswitch/scanner:full enhanced-scan --include-deps --external-tools /workspace
+# Enhanced scan with ML confidence scoring
+docker run --rm -v $(pwd):/workspace pqswitch/scanner:latest enhanced-scan --enable-ml /workspace
+
+# Comprehensive layered scan
+docker run --rm -v $(pwd):/workspace pqswitch/scanner:latest layered-scan --enable-l2 --enable-ml /workspace
 ```
-- Everything in Standard + external security tools
-- Snyk integration, OWASP dependency check
-- **Best for**: Security audits, compliance scans, production environments
+
+**What's included:**
+- ✅ **Complete crypto detection**: All scan modes (L0, L1, L2, ML-enhanced)
+- ✅ **Multi-language support**: Go, Java, Python, JavaScript, C/C++, Rust, and more
+- ✅ **Cloud integration**: AWS CLI for S3 uploads and cloud workflows
+- ✅ **Essential tools**: Git, Bash, cURL for repository analysis
+- ✅ **Optimized size**: Only ~60MB with all necessary components
+- ✅ **Multi-platform**: Linux AMD64 and ARM64 support
+
+**Perfect for:**
+- 🚀 **CI/CD pipelines**: Fast, reliable crypto vulnerability detection
+- 🏢 **Enterprise workflows**: Complete scanning with cloud integration
+- 🔍 **Security audits**: All detection layers and ML confidence scoring
+- ⚡ **Local development**: Lightweight but comprehensive analysis
 
 ## 📖 Comprehensive Usage Guide
 
@@ -174,7 +176,7 @@ pqswitch scan . --include "*.swift,*.m,*.mm" --min-confidence 0.3
 pqswitch layered-scan . --enable-l2 --parallel 8
 
 # Container-optimized scan
-docker run --rm -v $(pwd):/workspace pqswitch/scanner:standard \
+docker run --rm -v $(pwd):/workspace pqswitch/scanner:latest \
   enhanced-scan --include-deps --min-confidence 0.4 /workspace
 ```
 
@@ -331,7 +333,7 @@ jobs:
 ```yaml
 # GitLab CI, Jenkins, etc.
 scan-crypto:
-  image: pqswitch/scanner:standard
+  image: pqswitch/scanner:latest
   script:
     - pqswitch enhanced-scan --include-deps --output sarif --output-file security.sarif .
   artifacts:
@@ -348,7 +350,7 @@ pipeline {
         stage('Security Scan') {
             steps {
                 script {
-                    docker.image('pqswitch/scanner:standard').inside {
+                    docker.image('pqswitch/scanner:latest').inside {
                         sh 'pqswitch layered-scan --enable-l2 --output json --output-file results.json .'
                     }
                 }
