@@ -112,22 +112,26 @@ RUN pip install safety
 
 ## 🚀 **Deployment Strategies**
 
-### Strategy A: Multi-Image Approach (Recommended)
+### Current Implementation: Single Optimized Image
 
 ```bash
-# Three separate optimized images
-# Docker Image Variants
-docker pull pqswitch/scanner:lite      # ~50MB
-docker pull pqswitch/scanner:standard  # ~200MB
-docker pull pqswitch/scanner:full      # ~500MB
+# Single comprehensive image
+docker pull pqswitch/scanner:latest    # ~60MB
 ```
 
-**Pros:**
-- Users choose appropriate size/capability
-- Each image optimized for use case
-- Clear capability boundaries
+**Current Approach:**
+- One image with all capabilities (~60MB)
+- Complete crypto detection (L0, L1, L2, ML)
+- AWS CLI and essential tools included
+- Multi-platform support (AMD64, ARM64)
 
-**Cons:**
+**Pros:**
+- Simplified deployment and maintenance
+- No confusion about which variant to use
+- All features available in every deployment
+- Optimal size-to-capability ratio
+
+**Considerations:**
 - Multiple images to maintain
 - Complexity in CI/CD selection
 
@@ -157,7 +161,7 @@ kind: Pod
 spec:
   containers:
   - name: crypto-scanner
-    image: pqswitch/scanner:lite
+    image: pqswitch/scanner:latest
 ```
 
 **Pros:**
@@ -239,14 +243,14 @@ USER pqswitch
 
 ### Build Commands
 ```bash
-# Build all variants
-docker buildx build --target base -t pqswitch/scanner:lite .
-docker buildx build --target standard -t pqswitch/scanner:standard .
-docker buildx build --target full -t pqswitch/scanner:full .
+# Current single image build (via GoReleaser)
+goreleaser release --clean
 
-# Multi-platform builds
-docker buildx build --platform linux/amd64,linux/arm64 \
-  --target standard -t pqswitch/scanner:standard . --push
+# Manual Docker build for testing
+docker build -f build/docker/Dockerfile -t pqswitch/scanner:latest .
+
+# Multi-platform builds (handled by GoReleaser)
+# Builds for linux/amd64 and linux/arm64 automatically
 ```
 
 ## 📊 **Performance Characteristics**
