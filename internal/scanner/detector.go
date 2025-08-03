@@ -766,7 +766,7 @@ func (d *Detector) GenerateSummary(files []string, findings []types.Finding, dur
 		TotalFindings:      len(findings),
 		FindingsBySeverity: make(map[string]int),
 		FindingsByType:     make(map[string]int),
-		Duration:           duration,
+		DurationSeconds:    duration.Seconds(),
 	}
 
 	for _, finding := range findings {

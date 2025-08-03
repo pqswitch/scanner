@@ -34,12 +34,12 @@ const (
 
 // LayeredResult contains results from all detection stages
 type LayeredResult struct {
-	Stage           DetectionStage  `json:"stage"`
-	Findings        []types.Finding `json:"findings"`
-	ConfidenceScore float64         `json:"confidence_score"`
-	ProcessingTime  time.Duration   `json:"processing_time"`
-	Metadata        map[string]any  `json:"metadata"`
-	Suppressions    []string        `json:"suppressions,omitempty"`
+	Stage                 DetectionStage  `json:"stage"`
+	Findings              []types.Finding `json:"findings"`
+	ConfidenceScore       float64         `json:"confidence_score"`
+	ProcessingTimeSeconds float64         `json:"processing_time_seconds"`
+	Metadata              map[string]any  `json:"metadata"`
+	Suppressions          []string        `json:"suppressions,omitempty"`
 }
 
 // FileContext provides rich context for multi-stage analysis
@@ -142,10 +142,10 @@ func (ld *LayeredDetector) AnalyzeFile(ctx context.Context, fileCtx *FileContext
 	// Early filtering for non-relevant files
 	if ld.shouldSkipFile(fileCtx) {
 		return &LayeredResult{
-			Stage:          StageL0Regex,
-			Findings:       []types.Finding{},
-			ProcessingTime: time.Since(startTime),
-			Metadata:       map[string]any{"skipped": true, "reason": "non-relevant"},
+			Stage:                 StageL0Regex,
+			Findings:              []types.Finding{},
+			ProcessingTimeSeconds: time.Since(startTime).Seconds(),
+			Metadata:              map[string]any{"skipped": true, "reason": "non-relevant"},
 		}, nil
 	}
 
@@ -197,10 +197,10 @@ func (ld *LayeredDetector) AnalyzeFile(ctx context.Context, fileCtx *FileContext
 	ld.benchmark.RecordAnalysis(fileCtx.FilePath, stageResults, finalFindings)
 
 	return &LayeredResult{
-		Stage:           ld.determineHighestStage(stageResults),
-		Findings:        finalFindings,
-		ConfidenceScore: ld.calculateOverallConfidence(finalFindings),
-		ProcessingTime:  time.Since(startTime),
+		Stage:                 ld.determineHighestStage(stageResults),
+		Findings:              finalFindings,
+		ConfidenceScore:       ld.calculateOverallConfidence(finalFindings),
+		ProcessingTimeSeconds: time.Since(startTime).Seconds(),
 		Metadata: map[string]any{
 			"stages_completed": len(stageResults),
 			"l0_hits":          len(l0Result.Findings),
@@ -218,9 +218,9 @@ func (ld *LayeredDetector) runL0Analysis(ctx context.Context, fileCtx *FileConte
 	findings := ld.l0Filter.ScanContent(fileCtx.Content, fileCtx.FilePath, fileCtx.Language)
 
 	return &LayeredResult{
-		Stage:          StageL0Regex,
-		Findings:       findings,
-		ProcessingTime: time.Since(startTime),
+		Stage:                 StageL0Regex,
+		Findings:              findings,
+		ProcessingTimeSeconds: time.Since(startTime).Seconds(),
 		Metadata: map[string]any{
 			"regex_patterns_matched": len(findings),
 			"stage":                  "L0_regex_prefilter",
@@ -237,9 +237,9 @@ func (ld *LayeredDetector) runL1Analysis(ctx context.Context, fileCtx *FileConte
 	findings := ld.l1AST.AnalyzeHotspots(fileCtx, hotspots)
 
 	return &LayeredResult{
-		Stage:          StageL1AST,
-		Findings:       findings,
-		ProcessingTime: time.Since(startTime),
+		Stage:                 StageL1AST,
+		Findings:              findings,
+		ProcessingTimeSeconds: time.Since(startTime).Seconds(),
 		Metadata: map[string]any{
 			"hotspots_analyzed":    len(hotspots),
 			"ast_patterns_matched": len(findings),
@@ -257,9 +257,9 @@ func (ld *LayeredDetector) runL2Analysis(ctx context.Context, fileCtx *FileConte
 	findings := ld.l2DataFlow.AnalyzeFlows(dataFlows, fileCtx)
 
 	return &LayeredResult{
-		Stage:          StageL2DataFlow,
-		Findings:       findings,
-		ProcessingTime: time.Since(startTime),
+		Stage:                 StageL2DataFlow,
+		Findings:              findings,
+		ProcessingTimeSeconds: time.Since(startTime).Seconds(),
 		Metadata: map[string]any{
 			"data_flows_traced": len(dataFlows),
 			"taint_violations":  len(findings),

@@ -20,23 +20,23 @@ type DetectionBenchmark struct {
 
 // PerformanceMetric tracks timing and resource usage
 type PerformanceMetric struct {
-	TotalCalls     int64
-	TotalDuration  time.Duration
-	MinDuration    time.Duration
-	MaxDuration    time.Duration
-	AvgDuration    time.Duration
-	FilesProcessed int64
-	BytesProcessed int64
-	ErrorCount     int64
-	StageMetrics   map[DetectionStage]*StageMetric
+	TotalCalls        int64
+	TotalDurationSecs float64
+	MinDurationSecs   float64
+	MaxDurationSecs   float64
+	AvgDurationSecs   float64
+	FilesProcessed    int64
+	BytesProcessed    int64
+	ErrorCount        int64
+	StageMetrics      map[DetectionStage]*StageMetric
 }
 
 // StageMetric tracks metrics for each detection stage
 type StageMetric struct {
-	CallCount     int64
-	Duration      time.Duration
-	FindingsCount int64
-	SuccessRate   float64
+	CallCount       int64
+	DurationSeconds float64
+	FindingsCount   int64
+	SuccessRate     float64
 }
 
 // AccuracyStats tracks detection accuracy over time
@@ -58,7 +58,7 @@ type BenchmarkReport struct {
 	AccuracyMetrics map[string]*AccuracyStats `json:"accuracy_metrics"`
 	Recommendations []string                  `json:"recommendations"`
 	GeneratedAt     time.Time                 `json:"generated_at"`
-	Duration        time.Duration             `json:"total_duration"`
+	DurationSeconds float64                   `json:"total_duration_seconds"`
 }
 
 // NewDetectionBenchmark creates a new benchmarking system
@@ -88,21 +88,21 @@ func (db *DetectionBenchmark) RecordAnalysis(filePath string, stageResults []Lay
 	metric.FilesProcessed++
 
 	// Calculate total processing time
-	totalDuration := time.Duration(0)
+	totalDuration := float64(0)
 	for _, result := range stageResults {
-		totalDuration += result.ProcessingTime
+		totalDuration += result.ProcessingTimeSeconds
 		db.recordStageMetric(metric, result)
 	}
 
 	// Update duration statistics
-	metric.TotalDuration += totalDuration
-	if metric.MinDuration == 0 || totalDuration < metric.MinDuration {
-		metric.MinDuration = totalDuration
+	metric.TotalDurationSecs += totalDuration
+	if metric.MinDurationSecs == 0 || totalDuration < metric.MinDurationSecs {
+		metric.MinDurationSecs = totalDuration
 	}
-	if totalDuration > metric.MaxDuration {
-		metric.MaxDuration = totalDuration
+	if totalDuration > metric.MaxDurationSecs {
+		metric.MaxDurationSecs = totalDuration
 	}
-	metric.AvgDuration = time.Duration(int64(metric.TotalDuration) / metric.TotalCalls)
+	metric.AvgDurationSecs = metric.TotalDurationSecs / float64(metric.TotalCalls)
 
 	// Record file-specific metrics
 	fileKey := db.categorizeFile(filePath)
@@ -126,7 +126,7 @@ func (db *DetectionBenchmark) recordStageMetric(metric *PerformanceMetric, resul
 
 	stageMet := metric.StageMetrics[stage]
 	stageMet.CallCount++
-	stageMet.Duration += result.ProcessingTime
+	stageMet.DurationSeconds += result.ProcessingTimeSeconds
 	stageMet.FindingsCount += int64(len(result.Findings))
 
 	// Calculate success rate (findings found / attempts)
@@ -139,13 +139,13 @@ func (db *DetectionBenchmark) recordStageMetric(metric *PerformanceMetric, resul
 func (db *DetectionBenchmark) updateFileMetrics(metric *PerformanceMetric, results []LayeredResult, findings []types.Finding) {
 	metric.TotalCalls++
 
-	totalDuration := time.Duration(0)
+	totalDuration := float64(0)
 	for _, result := range results {
-		totalDuration += result.ProcessingTime
+		totalDuration += result.ProcessingTimeSeconds
 	}
 
-	metric.TotalDuration += totalDuration
-	metric.AvgDuration = time.Duration(int64(metric.TotalDuration) / metric.TotalCalls)
+	metric.TotalDurationSecs += totalDuration
+	metric.AvgDurationSecs = metric.TotalDurationSecs / float64(metric.TotalCalls)
 }
 
 // updateAccuracyStats updates accuracy statistics
@@ -245,7 +245,7 @@ func (db *DetectionBenchmark) GenerateReport() *BenchmarkReport {
 		StageBreakdown:  make(map[string]*StageMetric),
 		AccuracyMetrics: db.accuracyStats,
 		GeneratedAt:     time.Now(),
-		Duration:        time.Since(db.startTime),
+		DurationSeconds: time.Since(db.startTime).Seconds(),
 	}
 
 	// Extract stage breakdown from overall metrics
@@ -272,7 +272,7 @@ func (db *DetectionBenchmark) generateRecommendations() []string {
 	}
 
 	// Performance recommendations
-	if overall.AvgDuration > 5*time.Second {
+	if overall.AvgDurationSecs > 5 {
 		recommendations = append(recommendations,
 			"Consider increasing parallelism - average file processing time is high")
 	}
@@ -281,7 +281,7 @@ func (db *DetectionBenchmark) generateRecommendations() []string {
 	for stage, metric := range overall.StageMetrics {
 		stageName := db.stageToString(stage)
 
-		if metric.Duration > overall.TotalDuration/2 {
+		if metric.DurationSeconds > overall.TotalDurationSecs/2 {
 			recommendations = append(recommendations,
 				fmt.Sprintf("%s stage is consuming >50%% of processing time - consider optimization", stageName))
 		}
@@ -335,8 +335,8 @@ func (db *DetectionBenchmark) GetTopPerformers(limit int) []string {
 
 		// Calculate performance score (findings per second)
 		score := 0.0
-		if metric.AvgDuration > 0 {
-			score = float64(metric.FilesProcessed) / metric.AvgDuration.Seconds()
+		if metric.AvgDurationSecs > 0 {
+			score = float64(metric.FilesProcessed) / metric.AvgDurationSecs
 		}
 
 		performers = append(performers, performer{category, score})
@@ -373,10 +373,10 @@ func (db *DetectionBenchmark) GetBottlenecks() map[string]string {
 
 	// Find slowest stage
 	var slowestStage DetectionStage
-	var slowestDuration time.Duration
+	var slowestDuration float64
 
 	for stage, metric := range overall.StageMetrics {
-		avgDuration := time.Duration(int64(metric.Duration) / metric.CallCount)
+		avgDuration := metric.DurationSeconds / float64(metric.CallCount)
 		if avgDuration > slowestDuration {
 			slowestDuration = avgDuration
 			slowestStage = stage
@@ -384,7 +384,7 @@ func (db *DetectionBenchmark) GetBottlenecks() map[string]string {
 	}
 
 	if slowestDuration > 0 {
-		bottlenecks["slowest_stage"] = fmt.Sprintf("%s (avg: %v)",
+		bottlenecks["slowest_stage"] = fmt.Sprintf("%s (avg: %.2f seconds)",
 			db.stageToString(slowestStage), slowestDuration)
 	}
 

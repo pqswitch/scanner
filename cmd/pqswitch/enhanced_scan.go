@@ -157,7 +157,7 @@ func runScan(cmd *cobra.Command, args []string) error {
 		CryptoErrors:      cryptoErrors,
 		DependencyResults: dependencyResults,
 		ScanTime:          time.Now(),
-		Duration:          scanDuration,
+		DurationSeconds:   scanDuration.Seconds(),
 	}
 
 	// Show benchmark data if requested
@@ -547,7 +547,7 @@ func outputPretty(result *scanner.EnhancedScanResult) error {
 			summary["dep_medium"], summary["dep_low"])
 	}
 
-	fmt.Printf("⏱️  Scan completed in %v\n", result.Duration)
+	fmt.Printf("⏱️  Scan completed in %.2f seconds\n", result.DurationSeconds)
 
 	// Detailed crypto findings
 	if len(result.CryptoFindings) > 0 {

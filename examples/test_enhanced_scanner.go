@@ -156,7 +156,7 @@ func testProject(project TestProject) error {
 		CryptoErrors:      cryptoErrors,
 		DependencyResults: dependencyResults,
 		ScanTime:          time.Now(),
-		Duration:          1 * time.Second,
+		DurationSeconds:   1.0,
 	}
 
 	// Test JSON serialization

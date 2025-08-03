@@ -11,8 +11,7 @@ run:
     - ml-training/training
 
 output:
-  formats:
-    - format: colored-line-number
+  format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 

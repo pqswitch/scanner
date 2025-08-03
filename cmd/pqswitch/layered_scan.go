@@ -227,7 +227,7 @@ func runLayeredScan(cmd *cobra.Command, args []string) error {
 			FilteredFindings: len(filteredFindings),
 			MinConfidence:    layeredMinConfidence,
 			StageStats:       stageStats,
-			Duration:         duration,
+			DurationSeconds:  duration.Seconds(),
 			ProjectContext:   projectCtx,
 		},
 		Findings: filteredFindings,
@@ -273,7 +273,7 @@ type LayeredScanSummary struct {
 	FilteredFindings int                     `json:"filtered_findings"`
 	MinConfidence    float64                 `json:"min_confidence"`
 	StageStats       map[string]int          `json:"stage_stats"`
-	Duration         time.Duration           `json:"duration"`
+	DurationSeconds  float64                 `json:"duration_seconds"`
 	ProjectContext   *scanner.ProjectContext `json:"project_context"`
 }
 
@@ -480,7 +480,7 @@ func displayLayeredResults(results *LayeredScanResult) {
 	fmt.Printf("   • Files Scanned: %d/%d\n", results.Summary.ScannedFiles, results.Summary.TotalFiles)
 	fmt.Printf("   • Total Findings: %d\n", results.Summary.TotalFindings)
 	fmt.Printf("   • High Confidence: %d (≥%.2f)\n", results.Summary.FilteredFindings, results.Summary.MinConfidence)
-	fmt.Printf("   • Duration: %v\n", results.Summary.Duration)
+	fmt.Printf("   • Duration: %.2f seconds\n", results.Summary.DurationSeconds)
 
 	// Show stage statistics
 	if len(results.Summary.StageStats) > 0 {

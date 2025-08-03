@@ -46,7 +46,7 @@ type ScanSummary struct {
 	FindingsBySeverity map[string]int `json:"findings_by_severity"`
 	FindingsByType     map[string]int `json:"findings_by_type"`
 	RiskScore          float64        `json:"risk_score"`
-	Duration           time.Duration  `json:"duration"`
+	DurationSeconds    float64        `json:"duration_seconds"`
 }
 
 // ScanMetadata holds scan execution metadata

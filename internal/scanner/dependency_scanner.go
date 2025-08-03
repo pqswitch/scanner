@@ -39,12 +39,12 @@ type DependencyInfo struct {
 
 // DependencyScanResult contains the results of dependency scanning
 type DependencyScanResult struct {
-	PackageManager    string           `json:"package_manager"`
-	TotalDependencies int              `json:"total_dependencies"`
-	Dependencies      []DependencyInfo `json:"dependencies"`
-	Vulnerabilities   []Vulnerability  `json:"vulnerabilities"`
-	ScanTime          time.Time        `json:"scan_time"`
-	ScanDuration      time.Duration    `json:"scan_duration"`
+	PackageManager      string           `json:"package_manager"`
+	TotalDependencies   int              `json:"total_dependencies"`
+	Dependencies        []DependencyInfo `json:"dependencies"`
+	Vulnerabilities     []Vulnerability  `json:"vulnerabilities"`
+	ScanTime            time.Time        `json:"scan_time"`
+	ScanDurationSeconds float64          `json:"scan_duration_seconds"`
 }
 
 // DependencyScanner interface for different package managers
@@ -200,10 +200,10 @@ func (s *NPMAuditScanner) Scan(ctx context.Context, projectPath string) (*Depend
 	}
 
 	result := &DependencyScanResult{
-		PackageManager:  "npm",
-		ScanTime:        start,
-		ScanDuration:    time.Since(start),
-		Vulnerabilities: make([]Vulnerability, 0),
+		PackageManager:      "npm",
+		ScanTime:            start,
+		ScanDurationSeconds: float64(time.Since(start).Seconds()),
+		Vulnerabilities:     make([]Vulnerability, 0),
 	}
 
 	// Convert npm audit format to our format
@@ -253,10 +253,10 @@ func (s *GoVulnScanner) Scan(ctx context.Context, projectPath string) (*Dependen
 	// Parse govulncheck output (simplified)
 	lines := strings.Split(string(output), "\n")
 	result := &DependencyScanResult{
-		PackageManager:  "go",
-		ScanTime:        start,
-		ScanDuration:    time.Since(start),
-		Vulnerabilities: make([]Vulnerability, 0),
+		PackageManager:      "go",
+		ScanTime:            start,
+		ScanDurationSeconds: float64(time.Since(start).Seconds()),
+		Vulnerabilities:     make([]Vulnerability, 0),
 	}
 
 	for _, line := range lines {
@@ -312,10 +312,10 @@ func (s *PipSafetyScanner) Scan(ctx context.Context, projectPath string) (*Depen
 	// This would require safety to be installed
 	// For now, return a placeholder implementation
 	result := &DependencyScanResult{
-		PackageManager:  "pip",
-		ScanTime:        start,
-		ScanDuration:    time.Since(start),
-		Vulnerabilities: make([]Vulnerability, 0),
+		PackageManager:      "pip",
+		ScanTime:            start,
+		ScanDurationSeconds: float64(time.Since(start).Seconds()),
+		Vulnerabilities:     make([]Vulnerability, 0),
 	}
 
 	return result, nil
@@ -340,10 +340,10 @@ func (s *CargoAuditScanner) Scan(ctx context.Context, projectPath string) (*Depe
 	// This would require cargo-audit to be installed
 	// For now, return a placeholder implementation
 	result := &DependencyScanResult{
-		PackageManager:  "cargo",
-		ScanTime:        start,
-		ScanDuration:    time.Since(start),
-		Vulnerabilities: make([]Vulnerability, 0),
+		PackageManager:      "cargo",
+		ScanTime:            start,
+		ScanDurationSeconds: float64(time.Since(start).Seconds()),
+		Vulnerabilities:     make([]Vulnerability, 0),
 	}
 
 	return result, nil
@@ -382,10 +382,10 @@ func (s *SnykScanner) Scan(ctx context.Context, projectPath string) (*Dependency
 
 	// Parse Snyk output (simplified)
 	result := &DependencyScanResult{
-		PackageManager:  "snyk",
-		ScanTime:        start,
-		ScanDuration:    time.Since(start),
-		Vulnerabilities: make([]Vulnerability, 0),
+		PackageManager:      "snyk",
+		ScanTime:            start,
+		ScanDurationSeconds: float64(time.Since(start).Seconds()),
+		Vulnerabilities:     make([]Vulnerability, 0),
 	}
 
 	// TODO: Implement full Snyk JSON parsing
@@ -438,7 +438,7 @@ func (d *Detector) EnhancedScan(scanConfig *Config) (*EnhancedScanResult, error)
 		CryptoErrors:      cryptoErrors,
 		DependencyResults: dependencyResults,
 		ScanTime:          start,
-		Duration:          time.Since(start),
+		DurationSeconds:   time.Since(start).Seconds(),
 	}
 
 	return result, nil
@@ -451,7 +451,7 @@ type EnhancedScanResult struct {
 	CryptoErrors      []string                `json:"crypto_errors,omitempty"`
 	DependencyResults []*DependencyScanResult `json:"dependency_results,omitempty"`
 	ScanTime          time.Time               `json:"scan_time"`
-	Duration          time.Duration           `json:"duration"`
+	DurationSeconds   float64                 `json:"duration_seconds"`
 }
 
 // GetVulnerabilitySummary returns a summary of all vulnerabilities found
