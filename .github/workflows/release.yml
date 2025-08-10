@@ -62,7 +62,8 @@ jobs:
         cosign-release: 'v2.2.4'
     - name: Verify cosign install
       run: |
-        which cosign || true
+        echo "PATH=$PATH"
+        which cosign
         cosign version
 
     - name: Install Syft (for SBOM generation)

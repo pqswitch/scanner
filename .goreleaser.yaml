@@ -85,7 +85,7 @@ changelog:
 
 # Sign checksums with Cosign (keyless OIDC)
 signs:
-  - cmd: /usr/local/bin/cosign
+  - cmd: cosign
     args:
       - sign-blob
       - --yes
@@ -93,6 +93,8 @@ signs:
       - ${artifact}
     artifacts: checksum
     output: true
+    env:
+      - PATH={{ .Env.PATH }}:/usr/local/bin:/opt/hostedtoolcache/cosign:/opt/hostedtoolcache/cosign/x64:/home/runner/.local/bin
 
 release:
   github:
@@ -142,13 +144,15 @@ sboms:
 
 # Sign Docker images with Cosign (keyless OIDC)
 docker_signs:
-  - cmd: /usr/local/bin/cosign
+  - cmd: cosign
     args:
       - sign
       - --yes
       - ${artifact}@${digest}
     artifacts: all
     output: true
+    env:
+      - PATH={{ .Env.PATH }}:/usr/local/bin:/opt/hostedtoolcache/cosign:/opt/hostedtoolcache/cosign/x64:/home/runner/.local/bin
 
 # GitHub
 gitea_urls:
