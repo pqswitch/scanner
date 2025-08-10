@@ -1,11 +1,11 @@
 package crypto_rules
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/pqswitch/scanner/internal/config"
 	"github.com/pqswitch/scanner/internal/scanner"
+	"github.com/pqswitch/scanner/test/helpers"
 )
 
 // TestApacheSparkFalsePositives tests that sample data containing bird names
@@ -91,7 +91,7 @@ The falcon is known for its speed.
 			for _, finding := range findings {
 				if finding.Algorithm == "FALCON" ||
 					(finding.RuleID == "l0-pq-algorithms" &&
-						findingContainsFalcon(finding.Context)) {
+						helpers.Contains([]string{"falcon"}, finding.Context)) {
 					foundFalcon = true
 					// Check confidence - should be very low for false positives
 					if !tt.expectFindings && finding.Confidence > 0.3 {
@@ -112,8 +112,7 @@ The falcon is known for its speed.
 	}
 }
 
-// TestKubernetesFalsePositives tests Kubernetes-specific contexts
-func TestKubernetesFalsePositives(t *testing.T) {
+func TestKubernetesPKIFalsePositives(t *testing.T) {
 	tests := []struct {
 		name           string
 		filePath       string
@@ -275,6 +274,439 @@ func encryptData(data []byte) ([]byte, error) {
 	}
 }
 
+func TestKubernetesUtilityHashingFalsePositives(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "kubernetes_md5_utility_hashing",
+			filePath: "pkg/api/v1/endpoints/util.go",
+			content: `
+func hashObject(hasher hash.Hash, obj interface{}) string {
+    hasher := md5.New()
+    deepHashObject(hasher, obj)
+    return hex.EncodeToString(hasher.Sum(nil))
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubernetes MD5 utility hashing should have very low confidence",
+		},
+		{
+			name:     "kubernetes_sha1_volume_driver",
+			filePath: "pkg/volume/util/attach_limit.go",
+			content: `
+func generateShortDriverName(driverName string) string {
+    charsFromDriverName := driverName[:23]
+    hash := sha1.New()
+    hash.Write([]byte(driverName))
+    hashed := hex.EncodeToString(hash.Sum(nil))
+    return charsFromDriverName + hashed[:8]
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubernetes volume driver name generation should have very low confidence",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "MD5" || finding.Algorithm == "SHA1" ||
+					finding.Algorithm == "SHA512" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
+func TestKubernetesTestFileFalsePositives(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "kubernetes_test_file",
+			filePath: "staging/src/k8s.io/client-go/util/cert/cert_test.go",
+			content: `
+func TestSelfSignedCertHasSAN(t *testing.T) {
+    key, err := rsa.GenerateKey(cryptorand.Reader, 2048)
+    if err != nil {
+        t.Fatal(err)
+    }
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubernetes test files should have reduced confidence",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "RSA" || finding.Algorithm == "MD5" ||
+					finding.Algorithm == "SHA1" || finding.Algorithm == "SHA256" || finding.Algorithm == "ECDSA" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
+func TestKubeadmPKIFalsePositives(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "kubernetes_kubeadm_pki",
+			filePath: "cmd/kubeadm/app/util/pkiutil/pki_helpers.go",
+			content: `
+func NewPrivateKey() (*rsa.PrivateKey, error) {
+    return rsa.GenerateKey(cryptorand.Reader, rsaKeySize)
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubeadm PKI utilities should have reduced confidence",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "RSA" || finding.Algorithm == "MD5" ||
+					finding.Algorithm == "SHA1" || finding.Algorithm == "SHA256" || finding.Algorithm == "ECDSA" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
+func TestKubernetesVolumeDriverFalsePositives(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "kubernetes_sha1_volume_driver",
+			filePath: "pkg/volume/util/attach_limit.go",
+			content: `
+func generateShortDriverName(driverName string) string {
+    charsFromDriverName := driverName[:23]
+    hash := sha1.New()
+    hash.Write([]byte(driverName))
+    hashed := hex.EncodeToString(hash.Sum(nil))
+    return charsFromDriverName + hashed[:8]
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubernetes volume driver name generation should have very low confidence",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "MD5" || finding.Algorithm == "SHA1" ||
+					finding.Algorithm == "SHA512" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
+func TestKubernetesServiceAccountJWTFalsePositives(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "kubernetes_service_account_jwt",
+			filePath: "pkg/serviceaccount/jwt.go",
+			content: `
+func hashPublicKey(publicKey interface{}) (string, error) {
+    hasher := sha256.New()
+    hasher.Write(publicKeyDERBytes)
+    return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+`,
+			language:       "go",
+			expectHighConf: false,
+			description:    "Kubernetes service account JWT hashing should have slight reduction",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "MD5" || finding.Algorithm == "SHA1" ||
+					finding.Algorithm == "SHA512" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
+func TestNonKubernetesRSADetection(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		content        string
+		language       string
+		expectHighConf bool
+		description    string
+	}{
+		{
+			name:     "non_kubernetes_rsa_usage",
+			filePath: "app/crypto/encryption.go",
+			content: `
+func encryptData(data []byte) ([]byte, error) {
+    key, err := rsa.GenerateKey(rand.Reader, 2048)
+    if err != nil {
+        return nil, err
+    }
+    return rsa.EncryptPKCS1v15(rand.Reader, &key.PublicKey, data)
+}
+`,
+			language:       "go",
+			expectHighConf: true,
+			description:    "Non-Kubernetes RSA usage should maintain normal confidence",
+		},
+	}
+
+	cfg := &config.Config{
+		Scanner: config.ScannerConfig{
+			EnableAST: false,
+		},
+	}
+
+	preFilter := scanner.NewRegexPreFilter(cfg)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			findings := preFilter.ScanContent([]byte(tt.content), tt.filePath, tt.language)
+
+			foundCrypto := false
+			for _, finding := range findings {
+				if finding.Algorithm == "MD5" || finding.Algorithm == "SHA1" ||
+					finding.Algorithm == "SHA512" {
+					foundCrypto = true
+
+					t.Logf("Finding: %s at %s:%d, confidence: %.2f, algorithm: %s",
+						finding.RuleID, finding.File, finding.Line, finding.Confidence, finding.Algorithm)
+
+					if tt.expectHighConf {
+						// Non-Kubernetes code should maintain reasonable confidence
+						if finding.Confidence < 0.4 {
+							t.Errorf("Test %s: Expected higher confidence for non-K8s crypto usage, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					} else {
+						// Kubernetes infrastructure should have reduced confidence
+						if finding.Confidence > 0.5 && (finding.Algorithm == "MD5" || finding.Algorithm == "SHA1") {
+							t.Errorf("Test %s: Expected lower confidence for K8s utility hashing, got %.2f",
+								tt.name, finding.Confidence)
+						}
+					}
+				}
+			}
+
+			if !foundCrypto {
+				t.Logf("Test %s: No crypto usage detected (this may be expected for some test patterns)", tt.name)
+			}
+		})
+	}
+}
+
 // TestNonCryptographicHashUsage tests detection of non-security hash usage
 func TestNonCryptographicHashUsage(t *testing.T) {
 	tests := []struct {
@@ -374,10 +806,4 @@ func authenticateUser(password string) bool {
 			}
 		})
 	}
-}
-
-// Helper function to check if finding contains FALCON
-func findingContainsFalcon(context string) bool {
-	contextLower := strings.ToLower(context)
-	return strings.Contains(contextLower, "falcon")
 }

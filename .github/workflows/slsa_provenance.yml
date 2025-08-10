@@ -1,0 +1,23 @@
+name: SLSA Provenance
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate SLSA provenance for artifacts
+        uses: slsa-framework/slsa-github-generator/actions/generator@v2.0.0
+        with:
+          compile-generator: true
+          upload-assets: true
+          # Attest release artifacts in GitHub Release
+          provenance-name: pqswitch-provenance.intoto.jsonl
+          attestations: true

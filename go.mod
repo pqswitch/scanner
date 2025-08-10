@@ -8,6 +8,7 @@ require (
 	github.com/smacker/go-tree-sitter v0.0.0-20231219031718-233c2f923ac7
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
+	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -4,169 +4,168 @@ import (
 	"testing"
 
 	"github.com/pqswitch/scanner/internal/types"
+	"github.com/pqswitch/scanner/test/helpers"
 )
 
-// TestPythonCryptographyDetection validates our Python crypto detection rules for pyca/cryptography
+var mockPythonFindings = []types.Finding{
+	// Critical Legacy Hash Algorithms (Replace Immediately)
+	{
+		RuleID:    "python-cryptography-md5",
+		Algorithm: "MD5",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "weak-hash-md5",
+		Algorithm: "MD5",
+		Severity:  "critical",
+	},
+
+	// High Priority Legacy Hash Algorithms (Replace Soon)
+	{
+		RuleID:    "python-cryptography-sha1",
+		Algorithm: "SHA1",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "weak-hash-sha1",
+		Algorithm: "SHA1",
+		Severity:  "high",
+	},
+
+	// Critical Weak RSA Keys (Insufficient Length)
+	{
+		RuleID:    "python-cryptography-weak-rsa",
+		Algorithm: "RSA",
+		Severity:  "critical",
+	},
+
+	// High Priority Quantum-Vulnerable Asymmetric Algorithms
+	{
+		RuleID:    "python-cryptography-rsa-keygen",
+		Algorithm: "RSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "python-cryptography-ecdsa",
+		Algorithm: "ECDSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "python-cryptography-dh-keygen",
+		Algorithm: "DH",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "python-cryptography-dsa",
+		Algorithm: "DSA",
+		Severity:  "high",
+	},
+
+	// Medium Priority Modern but Quantum-Vulnerable
+	{
+		RuleID:    "python-cryptography-ed25519",
+		Algorithm: "Ed25519",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "python-cryptography-x25519",
+		Algorithm: "X25519",
+		Severity:  "medium",
+	},
+
+	// Info Level - Library Implementation Context
+	{
+		RuleID:    "python-cryptography-class-definitions",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "python-cryptography-algorithm-names",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "python-cryptography-imports",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "python-cryptography-rust-bindings",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+
+	// Info Level - Modern Quantum-Resistant Algorithms (Good Choices)
+	{
+		RuleID:    "python-cryptography-hash-algorithms",
+		Algorithm: "modern_hash",
+		Severity:  "info",
+	},
+
+	// Medium Priority - Legacy Libraries (Migration Recommended)
+	{
+		RuleID:    "python-legacy-crypto-libraries",
+		Algorithm: "various",
+		Severity:  "medium",
+	},
+}
+
 func TestPythonCryptographyDetection(t *testing.T) {
-	// Mock scan results for Python cryptography library patterns
-	mockFindings := []types.Finding{
-		// Critical Legacy Hash Algorithms (Replace Immediately)
-		{
-			RuleID:    "python-cryptography-md5",
-			Algorithm: "MD5",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "weak-hash-md5",
-			Algorithm: "MD5",
-			Severity:  "critical",
-		},
+	testCases := []struct {
+		name          string
+		ruleID        string
+		expectedSev   string
+		expectPresent bool
+	}{
+		// Critical Legacy Hash Algorithms
+		{"python-cryptography-md5", "python-cryptography-md5", "critical", true},
+		{"weak-hash-md5", "weak-hash-md5", "critical", true},
 
-		// High Priority Legacy Hash Algorithms (Replace Soon)
-		{
-			RuleID:    "python-cryptography-sha1",
-			Algorithm: "SHA1",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "weak-hash-sha1",
-			Algorithm: "SHA1",
-			Severity:  "high",
-		},
+		// High Priority Legacy Hash Algorithms
+		{"python-cryptography-sha1", "python-cryptography-sha1", "high", true},
+		{"weak-hash-sha1", "weak-hash-sha1", "high", true},
 
-		// Critical Weak RSA Keys (Insufficient Length)
-		{
-			RuleID:    "python-cryptography-weak-rsa",
-			Algorithm: "RSA",
-			Severity:  "critical",
-		},
+		// Critical Weak RSA Keys
+		{"python-cryptography-weak-rsa", "python-cryptography-weak-rsa", "critical", true},
 
 		// High Priority Quantum-Vulnerable Asymmetric Algorithms
-		{
-			RuleID:    "python-cryptography-rsa-keygen",
-			Algorithm: "RSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "python-cryptography-ecdsa",
-			Algorithm: "ECDSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "python-cryptography-dh-keygen",
-			Algorithm: "DH",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "python-cryptography-dsa",
-			Algorithm: "DSA",
-			Severity:  "high",
-		},
+		{"python-cryptography-rsa-keygen", "python-cryptography-rsa-keygen", "high", true},
+		{"python-cryptography-ecdsa", "python-cryptography-ecdsa", "high", true},
+		{"python-cryptography-dh-keygen", "python-cryptography-dh-keygen", "high", true},
+		{"python-cryptography-dsa", "python-cryptography-dsa", "high", true},
 
 		// Medium Priority Modern but Quantum-Vulnerable
-		{
-			RuleID:    "python-cryptography-ed25519",
-			Algorithm: "Ed25519",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "python-cryptography-x25519",
-			Algorithm: "X25519",
-			Severity:  "medium",
-		},
+		{"python-cryptography-ed25519", "python-cryptography-ed25519", "medium", true},
+		{"python-cryptography-x25519", "python-cryptography-x25519", "medium", true},
 
 		// Info Level - Library Implementation Context
-		{
-			RuleID:    "python-cryptography-class-definitions",
-			Algorithm: "various",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "python-cryptography-algorithm-names",
-			Algorithm: "various",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "python-cryptography-imports",
-			Algorithm: "various",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "python-cryptography-rust-bindings",
-			Algorithm: "various",
-			Severity:  "info",
-		},
+		{"python-cryptography-class-definitions", "python-cryptography-class-definitions", "info", true},
+		{"python-cryptography-algorithm-names", "python-cryptography-algorithm-names", "info", true},
+		{"python-cryptography-imports", "python-cryptography-imports", "info", true},
+		{"python-cryptography-rust-bindings", "python-cryptography-rust-bindings", "info", true},
 
-		// Info Level - Modern Quantum-Resistant Algorithms (Good Choices)
-		{
-			RuleID:    "python-cryptography-hash-algorithms",
-			Algorithm: "modern_hash",
-			Severity:  "info",
-		},
+		// Info Level - Modern Quantum-Resistant Algorithms
+		{"python-cryptography-hash-algorithms", "python-cryptography-hash-algorithms", "info", true},
 
-		// Medium Priority - Legacy Libraries (Migration Recommended)
-		{
-			RuleID:    "python-legacy-crypto-libraries",
-			Algorithm: "various",
-			Severity:  "medium",
-		},
+		// Medium Priority - Legacy Libraries
+		{"python-legacy-crypto-libraries", "python-legacy-crypto-libraries", "medium", true},
 	}
 
-	// Expected algorithm categories for validation
-	criticalAlgorithms := []string{"MD5", "RSA"} // MD5 and weak RSA
-	modernButQuantumVulnerable := []string{"Ed25519", "X25519"}
-	libraryImplementationRules := []string{
-		"python-cryptography-class-definitions",
-		"python-cryptography-algorithm-names",
-		"python-cryptography-imports",
-		"python-cryptography-rust-bindings",
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			helpers.AssertRule(t, mockPythonFindings, tc.ruleID, tc.expectedSev, tc.expectPresent)
+		})
 	}
-
-	t.Run("CriticalAlgorithmDetection", func(t *testing.T) {
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "critical" {
-				detected[finding.Algorithm] = true
-			}
-		}
-
-		for _, algo := range criticalAlgorithms {
-			if !detected[algo] {
-				t.Errorf("Critical algorithm %s not detected", algo)
-			}
-		}
-
-		if len(detected) < 2 { // MD5, RSA (weak)
-			t.Errorf("Expected at least 2 critical algorithms, got %d", len(detected))
-		}
-	})
-
-	t.Run("HighPriorityAlgorithmDetection", func(t *testing.T) {
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "high" {
-				detected[finding.Algorithm] = true
-			}
-		}
-
-		// Should detect quantum-vulnerable asymmetric algorithms
-		expectedHighPriority := []string{"RSA", "ECDSA", "DH", "DSA"}
-		for _, algo := range expectedHighPriority {
-			if !detected[algo] {
-				t.Errorf("High priority algorithm %s not detected", algo)
-			}
-		}
-	})
 
 	t.Run("ModernButQuantumVulnerableDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "medium" && contains(modernButQuantumVulnerable, finding.Algorithm) {
+		for _, finding := range mockPythonFindings {
+			if finding.Severity == "medium" && helpers.Contains([]string{"Ed25519", "X25519"}, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
 
-		for _, algo := range modernButQuantumVulnerable {
+		for _, algo := range []string{"Ed25519", "X25519"} {
 			if !detected[algo] {
 				t.Errorf("Modern quantum-vulnerable algorithm %s not detected", algo)
 			}
@@ -175,13 +174,23 @@ func TestPythonCryptographyDetection(t *testing.T) {
 
 	t.Run("LibraryImplementationContextDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "info" && contains(libraryImplementationRules, finding.RuleID) {
+		for _, finding := range mockPythonFindings {
+			if finding.Severity == "info" && helpers.Contains([]string{
+				"python-cryptography-class-definitions",
+				"python-cryptography-algorithm-names",
+				"python-cryptography-imports",
+				"python-cryptography-rust-bindings",
+			}, finding.RuleID) {
 				detected[finding.RuleID] = true
 			}
 		}
 
-		for _, rule := range libraryImplementationRules {
+		for _, rule := range []string{
+			"python-cryptography-class-definitions",
+			"python-cryptography-algorithm-names",
+			"python-cryptography-imports",
+			"python-cryptography-rust-bindings",
+		} {
 			if !detected[rule] {
 				t.Errorf("Library implementation rule %s not detected", rule)
 			}
@@ -208,8 +217,8 @@ func TestPythonCryptographyDetection(t *testing.T) {
 		}
 
 		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if hasPrefix(finding.RuleID, "python-") {
+		for _, finding := range mockPythonFindings {
+			if helpers.HasPrefix(finding.RuleID, "python-") {
 				detected[finding.RuleID] = true
 			}
 		}
@@ -223,7 +232,7 @@ func TestPythonCryptographyDetection(t *testing.T) {
 
 	t.Run("SeverityDistributionValidation", func(t *testing.T) {
 		severityCounts := make(map[string]int)
-		for _, finding := range mockFindings {
+		for _, finding := range mockPythonFindings {
 			severityCounts[finding.Severity]++
 		}
 
@@ -255,7 +264,7 @@ func TestPythonCryptographyDetection(t *testing.T) {
 			"legacy":     0, // Legacy library detection
 		}
 
-		for _, finding := range mockFindings {
+		for _, finding := range mockPythonFindings {
 			switch finding.RuleID {
 			case "python-cryptography-md5", "python-cryptography-sha1", "python-cryptography-hash-algorithms":
 				ruleCategories["hash"]++
@@ -294,8 +303,8 @@ func TestPythonCryptographyDetection(t *testing.T) {
 		}
 
 		detected := 0
-		for _, finding := range mockFindings {
-			if contains(quantumVulnerableRules, finding.RuleID) {
+		for _, finding := range mockPythonFindings {
+			if helpers.Contains(quantumVulnerableRules, finding.RuleID) {
 				detected++
 			}
 		}
@@ -321,7 +330,7 @@ func TestPythonCryptographyDetection(t *testing.T) {
 		}
 
 		detectedRules := make(map[string]bool)
-		for _, finding := range mockFindings {
+		for _, finding := range mockPythonFindings {
 			detectedRules[finding.RuleID] = true
 		}
 

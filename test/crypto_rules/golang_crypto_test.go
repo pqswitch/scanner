@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/pqswitch/scanner/internal/types"
+	"github.com/pqswitch/scanner/test/helpers"
 )
 
 // TestGolangCryptoDetection validates our Go crypto detection rules against Golang crypto library
@@ -215,7 +216,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 	t.Run("QuantumVulnerableDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if finding.Severity == "high" && contains(quantumVulnerableAlgorithms, finding.Algorithm) {
+			if finding.Severity == "high" && helpers.Contains(quantumVulnerableAlgorithms, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
@@ -230,7 +231,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 	t.Run("LegacyCipherDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if contains(legacyCiphers, finding.Algorithm) {
+			if helpers.Contains(legacyCiphers, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
@@ -245,7 +246,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 	t.Run("ModernAlgorithmDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if finding.Severity == "info" && contains(modernAlgorithms, finding.Algorithm) {
+			if finding.Severity == "info" && helpers.Contains(modernAlgorithms, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
@@ -258,7 +259,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 	t.Run("ModernHashDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if finding.Severity == "info" && contains(modernHashes, finding.Algorithm) {
+			if finding.Severity == "info" && helpers.Contains(modernHashes, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
@@ -273,7 +274,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 	t.Run("KeyDerivationDetection", func(t *testing.T) {
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if contains(keyDerivation, finding.Algorithm) {
+			if helpers.Contains(keyDerivation, finding.Algorithm) {
 				detected[finding.Algorithm] = true
 			}
 		}
@@ -297,7 +298,7 @@ func TestGolangCryptoDetection(t *testing.T) {
 
 		detected := make(map[string]bool)
 		for _, finding := range mockFindings {
-			if hasPrefix(finding.RuleID, "go-") {
+			if helpers.HasPrefix(finding.RuleID, "go-") {
 				detected[finding.RuleID] = true
 			}
 		}
@@ -339,13 +340,13 @@ func TestGolangCryptoDetection(t *testing.T) {
 		}
 
 		for _, finding := range mockFindings {
-			if contains([]string{"go-md4-package", "go-ed25519-package", "go-chacha20-package"}, finding.RuleID) {
+			if helpers.Contains([]string{"go-md4-package", "go-ed25519-package", "go-chacha20-package"}, finding.RuleID) {
 				ruleCategories["package"]++
 			}
-			if contains([]string{"go-md4-functions", "go-ed25519-functions", "go-chacha20poly1305-functions"}, finding.RuleID) {
+			if helpers.Contains([]string{"go-md4-functions", "go-ed25519-functions", "go-chacha20poly1305-functions"}, finding.RuleID) {
 				ruleCategories["function"]++
 			}
-			if contains([]string{"go-crypto-registrations", "go-crypto-imports", "go-hash-interface-implementation"}, finding.RuleID) {
+			if helpers.Contains([]string{"go-crypto-registrations", "go-crypto-imports", "go-hash-interface-implementation"}, finding.RuleID) {
 				ruleCategories["crypto"]++
 			}
 		}
@@ -356,18 +357,4 @@ func TestGolangCryptoDetection(t *testing.T) {
 			}
 		}
 	})
-}
-
-// Helper functions
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-func hasPrefix(str, prefix string) bool {
-	return len(str) >= len(prefix) && str[:len(prefix)] == prefix
 }

@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PQSwitch Scanner Output",
+  "description": "JSON schema for the PQSwitch scanner results.",
+  "type": "object",
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "file": { "type": "string" },
+          "line": { "type": "integer" },
+          "column": { "type": "integer" },
+          "message": { "type": "string" },
+          "severity": { "type": "string" },
+          "confidence": { "type": "number" },
+          "crypto_type": { "type": "string" },
+          "quantum_safe": { "type": "boolean" },
+          "suggestion": { "type": "string" }
+        },
+        "required": ["id", "file", "line", "message", "severity", "confidence", "crypto_type", "quantum_safe"]
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "total_findings": { "type": "integer" },
+        "high_severity": { "type": "integer" },
+        "quantum_vulnerable": { "type": "integer" }
+      },
+      "required": ["total_findings", "high_severity", "quantum_vulnerable"]
+    }
+  },
+  "required": ["findings", "summary"]
+}

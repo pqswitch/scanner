@@ -4,291 +4,226 @@ import (
 	"testing"
 
 	"github.com/pqswitch/scanner/internal/types"
+	"github.com/pqswitch/scanner/test/helpers"
 )
 
-// TestSwiftCryptoDetection validates our Swift crypto detection rules for Apple Swift-Crypto
-func TestSwiftCryptoDetection(t *testing.T) {
-	// Mock scan results for Swift cryptography patterns
-	mockFindings := []types.Finding{
-		// Critical Legacy/Broken Algorithms (Replace Immediately)
-		{
-			RuleID:    "swift-insecure-md5-usage",
-			Algorithm: "MD5",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "boringssl-legacy-md5-implementation",
-			Algorithm: "MD5",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "boringssl-legacy-sha1-implementation",
-			Algorithm: "SHA1",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "swift-insecure-sha1-usage",
-			Algorithm: "SHA1",
-			Severity:  "high",
-		},
+var mockSwiftFindings = []types.Finding{
+	// Critical Legacy/Broken Algorithms (Replace Immediately)
+	{
+		RuleID:    "swift-insecure-md5-usage",
+		Algorithm: "MD5",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "boringssl-legacy-md5-implementation",
+		Algorithm: "MD5",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "boringssl-legacy-sha1-implementation",
+		Algorithm: "SHA1",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "swift-insecure-sha1-usage",
+		Algorithm: "SHA1",
+		Severity:  "high",
+	},
 
-		// High Priority Quantum-Vulnerable Algorithms
-		{
-			RuleID:    "swift-ecdsa-p256-usage",
-			Algorithm: "ECDSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "swift-ecdsa-p384-usage",
-			Algorithm: "ECDSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "swift-ecdsa-p521-usage",
-			Algorithm: "ECDSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "boringssl-curve25519-implementation",
-			Algorithm: "Curve25519",
-			Severity:  "medium",
-		},
+	// High Priority Quantum-Vulnerable Algorithms
+	{
+		RuleID:    "swift-ecdsa-p256-usage",
+		Algorithm: "ECDSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "swift-ecdsa-p384-usage",
+		Algorithm: "ECDSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "swift-ecdsa-p521-usage",
+		Algorithm: "ECDSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "boringssl-curve25519-implementation",
+		Algorithm: "Curve25519",
+		Severity:  "medium",
+	},
+
+	// Medium Priority Modern but Quantum-Vulnerable
+	{
+		RuleID:    "swift-ed25519-usage",
+		Algorithm: "Ed25519",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "swift-x25519-usage",
+		Algorithm: "X25519",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "boringssl-kyber-support",
+		Algorithm: "Kyber",
+		Severity:  "medium",
+	},
+
+	// Info/Positive Detections (Quantum-Resistant)
+	{
+		RuleID:    "swift-chacha20poly1305-usage",
+		Algorithm: "ChaCha20-Poly1305",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-aes-gcm-usage",
+		Algorithm: "AES-GCM",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-sha256-usage",
+		Algorithm: "SHA256",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-sha384-usage",
+		Algorithm: "SHA384",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-sha512-usage",
+		Algorithm: "SHA512",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-hmac-usage",
+		Algorithm: "HMAC",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "swift-hkdf-usage",
+		Algorithm: "HKDF",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-chacha20-implementation",
+		Algorithm: "ChaCha20",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-poly1305-implementation",
+		Algorithm: "Poly1305",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-blake2-implementation",
+		Algorithm: "BLAKE2",
+		Severity:  "info",
+	},
+
+	// Post-Quantum Algorithms (Future-Ready)
+	{
+		RuleID:    "boringssl-mlkem-implementation",
+		Algorithm: "ML-KEM",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-mldsa-implementation",
+		Algorithm: "ML-DSA",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-slhdsa-implementation",
+		Algorithm: "SLH-DSA",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "boringssl-hybrid-schemes",
+		Algorithm: "HYBRID_PQ",
+		Severity:  "info",
+	},
+
+	// Library Context/Imports
+	{
+		RuleID:    "swift-cryptokit-imports",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-symmetric-key-usage",
+		Algorithm: "SYMMETRIC_KEY",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-digest-protocol-usage",
+		Algorithm: "DIGEST_PROTOCOL",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "swift-data-protocol-usage",
+		Algorithm: "DATA_PROTOCOL",
+		Severity:  "info",
+	},
+}
+
+func TestSwiftCryptoDetection(t *testing.T) {
+	testCases := []struct {
+		name          string
+		ruleID        string
+		expectedSev   string
+		expectPresent bool
+	}{
+		// Critical Legacy/Broken Algorithms
+		{"swift-insecure-md5-usage", "swift-insecure-md5-usage", "critical", true},
+		{"boringssl-legacy-md5-implementation", "boringssl-legacy-md5-implementation", "critical", true},
+		{"boringssl-legacy-sha1-implementation", "boringssl-legacy-sha1-implementation", "high", true},
+		{"swift-insecure-sha1-usage", "swift-insecure-sha1-usage", "high", true},
+
+		// High Priority Quantum-Vulnerable
+		{"swift-ecdsa-p256-usage", "swift-ecdsa-p256-usage", "high", true},
+		{"swift-ecdsa-p384-usage", "swift-ecdsa-p384-usage", "high", true},
+		{"swift-ecdsa-p521-usage", "swift-ecdsa-p521-usage", "high", true},
+		{"boringssl-curve25519-implementation", "boringssl-curve25519-implementation", "medium", true},
 
 		// Medium Priority Modern but Quantum-Vulnerable
-		{
-			RuleID:    "swift-ed25519-usage",
-			Algorithm: "Ed25519",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "swift-x25519-usage",
-			Algorithm: "X25519",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "boringssl-kyber-support",
-			Algorithm: "Kyber",
-			Severity:  "medium",
-		},
+		{"swift-ed25519-usage", "swift-ed25519-usage", "medium", true},
+		{"swift-x25519-usage", "swift-x25519-usage", "medium", true},
+		{"boringssl-kyber-support", "boringssl-kyber-support", "medium", true},
 
 		// Info/Positive Detections (Quantum-Resistant)
-		{
-			RuleID:    "swift-chacha20poly1305-usage",
-			Algorithm: "ChaCha20-Poly1305",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-aes-gcm-usage",
-			Algorithm: "AES-GCM",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-sha256-usage",
-			Algorithm: "SHA256",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-sha384-usage",
-			Algorithm: "SHA384",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-sha512-usage",
-			Algorithm: "SHA512",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-hmac-usage",
-			Algorithm: "HMAC",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "swift-hkdf-usage",
-			Algorithm: "HKDF",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-chacha20-implementation",
-			Algorithm: "ChaCha20",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-poly1305-implementation",
-			Algorithm: "Poly1305",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-blake2-implementation",
-			Algorithm: "BLAKE2",
-			Severity:  "info",
-		},
+		{"swift-chacha20poly1305-usage", "swift-chacha20poly1305-usage", "info", true},
+		{"swift-aes-gcm-usage", "swift-aes-gcm-usage", "info", true},
+		{"swift-sha256-usage", "swift-sha256-usage", "info", true},
+		{"swift-sha384-usage", "swift-sha384-usage", "info", true},
+		{"swift-sha512-usage", "swift-sha512-usage", "info", true},
+		{"swift-hmac-usage", "swift-hmac-usage", "medium", true},
+		{"swift-hkdf-usage", "swift-hkdf-usage", "info", true},
+		{"boringssl-chacha20-implementation", "boringssl-chacha20-implementation", "info", true},
+		{"boringssl-poly1305-implementation", "boringssl-poly1305-implementation", "info", true},
+		{"boringssl-blake2-implementation", "boringssl-blake2-implementation", "info", true},
 
-		// Post-Quantum Algorithms (Future-Ready)
-		{
-			RuleID:    "boringssl-mlkem-implementation",
-			Algorithm: "ML-KEM",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-mldsa-implementation",
-			Algorithm: "ML-DSA",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-slhdsa-implementation",
-			Algorithm: "SLH-DSA",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "boringssl-hybrid-schemes",
-			Algorithm: "HYBRID_PQ",
-			Severity:  "info",
-		},
+		// Post-Quantum Algorithms
+		{"boringssl-mlkem-implementation", "boringssl-mlkem-implementation", "info", true},
+		{"boringssl-mldsa-implementation", "boringssl-mldsa-implementation", "info", true},
+		{"boringssl-slhdsa-implementation", "boringssl-slhdsa-implementation", "info", true},
+		{"boringssl-hybrid-schemes", "boringssl-hybrid-schemes", "info", true},
 
-		// Library Context/Imports
-		{
-			RuleID:    "swift-cryptokit-imports",
-			Algorithm: "various",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-symmetric-key-usage",
-			Algorithm: "SYMMETRIC_KEY",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-digest-protocol-usage",
-			Algorithm: "DIGEST_PROTOCOL",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "swift-data-protocol-usage",
-			Algorithm: "DATA_PROTOCOL",
-			Severity:  "info",
-		},
+		// Library Context
+		{"swift-cryptokit-imports", "swift-cryptokit-imports", "info", true},
+		{"swift-symmetric-key-usage", "swift-symmetric-key-usage", "info", true},
+		{"swift-digest-protocol-usage", "swift-digest-protocol-usage", "info", true},
+		{"swift-data-protocol-usage", "swift-data-protocol-usage", "info", true},
 	}
 
-	t.Run("Swift Crypto Rule Coverage", func(t *testing.T) {
-		// Test critical algorithm detection
-		criticalRules := []string{
-			"swift-insecure-md5-usage",
-			"boringssl-legacy-md5-implementation",
-		}
-
-		for _, ruleID := range criticalRules {
-			found := false
-			for _, finding := range mockFindings {
-				if finding.RuleID == ruleID {
-					if finding.Severity != "critical" {
-						t.Errorf("Expected critical severity for rule %s, got %s", ruleID, finding.Severity)
-					}
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Critical rule %s not found in mock findings", ruleID)
-			}
-		}
-
-		// Test high priority quantum-vulnerable detection
-		highPriorityRules := []string{
-			"swift-ecdsa-p256-usage",
-			"swift-ecdsa-p384-usage",
-			"swift-ecdsa-p521-usage",
-		}
-
-		for _, ruleID := range highPriorityRules {
-			found := false
-			for _, finding := range mockFindings {
-				if finding.RuleID == ruleID {
-					if finding.Severity != "high" {
-						t.Errorf("Expected high severity for rule %s, got %s", ruleID, finding.Severity)
-					}
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("High priority rule %s not found in mock findings", ruleID)
-			}
-		}
-
-		// Test modern quantum-vulnerable detection
-		modernRules := []string{
-			"swift-ed25519-usage",
-			"swift-x25519-usage",
-		}
-
-		for _, ruleID := range modernRules {
-			found := false
-			for _, finding := range mockFindings {
-				if finding.RuleID == ruleID {
-					if finding.Severity != "medium" {
-						t.Errorf("Expected medium severity for rule %s, got %s", ruleID, finding.Severity)
-					}
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Modern crypto rule %s not found in mock findings", ruleID)
-			}
-		}
-
-		// Test quantum-resistant positive detections
-		positiveRules := []string{
-			"swift-chacha20poly1305-usage",
-			"swift-aes-gcm-usage",
-			"swift-sha256-usage",
-			"boringssl-chacha20-implementation",
-			"boringssl-blake2-implementation",
-		}
-
-		for _, ruleID := range positiveRules {
-			found := false
-			for _, finding := range mockFindings {
-				if finding.RuleID == ruleID {
-					if finding.Severity != "info" {
-						t.Errorf("Expected info severity for positive rule %s, got %s", ruleID, finding.Severity)
-					}
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Positive detection rule %s not found in mock findings", ruleID)
-			}
-		}
-
-		// Test post-quantum algorithm detection
-		pqRules := []string{
-			"boringssl-mlkem-implementation",
-			"boringssl-mldsa-implementation",
-			"boringssl-slhdsa-implementation",
-			"boringssl-hybrid-schemes",
-		}
-
-		for _, ruleID := range pqRules {
-			found := false
-			for _, finding := range mockFindings {
-				if finding.RuleID == ruleID {
-					if finding.Severity != "info" {
-						t.Errorf("Expected info severity for PQ rule %s, got %s", ruleID, finding.Severity)
-					}
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("Post-quantum rule %s not found in mock findings", ruleID)
-			}
-		}
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			helpers.AssertRule(t, mockSwiftFindings, tc.ruleID, tc.expectedSev, tc.expectPresent)
+		})
+	}
 
 	t.Run("Algorithm Coverage Validation", func(t *testing.T) {
 		algorithms := make(map[string]bool)
-		for _, finding := range mockFindings {
+		for _, finding := range mockSwiftFindings {
 			algorithms[finding.Algorithm] = true
 		}
 
@@ -308,7 +243,7 @@ func TestSwiftCryptoDetection(t *testing.T) {
 
 	t.Run("Severity Distribution", func(t *testing.T) {
 		severityCount := make(map[string]int)
-		for _, finding := range mockFindings {
+		for _, finding := range mockSwiftFindings {
 			severityCount[finding.Severity]++
 		}
 
@@ -331,11 +266,11 @@ func TestSwiftCryptoDetection(t *testing.T) {
 		swiftRules := 0
 		boringSSLRules := 0
 
-		for _, finding := range mockFindings {
-			if hasPrefix(finding.RuleID, "swift-") {
+		for _, finding := range mockSwiftFindings {
+			if helpers.HasPrefix(finding.RuleID, "swift-") {
 				swiftRules++
 			}
-			if hasPrefix(finding.RuleID, "boringssl-") {
+			if helpers.HasPrefix(finding.RuleID, "boringssl-") {
 				boringSSLRules++
 			}
 		}
@@ -357,14 +292,14 @@ func TestSwiftCryptoDetection(t *testing.T) {
 		quantumResistantAlgs := []string{"ChaCha20-Poly1305", "AES-GCM", "SHA256", "SHA384", "SHA512", "ChaCha20", "Poly1305", "BLAKE2", "HMAC", "HKDF"}
 		postQuantumAlgs := []string{"ML-KEM", "ML-DSA", "SLH-DSA", "HYBRID_PQ"}
 
-		for _, finding := range mockFindings {
-			if contains(quantumVulnerableAlgs, finding.Algorithm) {
+		for _, finding := range mockSwiftFindings {
+			if helpers.Contains(quantumVulnerableAlgs, finding.Algorithm) {
 				quantumVulnerable++
 			}
-			if contains(quantumResistantAlgs, finding.Algorithm) {
+			if helpers.Contains(quantumResistantAlgs, finding.Algorithm) {
 				quantumResistant++
 			}
-			if contains(postQuantumAlgs, finding.Algorithm) {
+			if helpers.Contains(postQuantumAlgs, finding.Algorithm) {
 				postQuantum++
 			}
 		}
@@ -397,7 +332,7 @@ func TestSwiftCryptoDetection(t *testing.T) {
 
 		for _, ruleID := range appleSwiftRules {
 			found := false
-			for _, finding := range mockFindings {
+			for _, finding := range mockSwiftFindings {
 				if finding.RuleID == ruleID {
 					found = true
 					break
@@ -426,7 +361,7 @@ func TestSwiftCryptoDetection(t *testing.T) {
 
 		for _, ruleID := range boringSSLRules {
 			found := false
-			for _, finding := range mockFindings {
+			for _, finding := range mockSwiftFindings {
 				if finding.RuleID == ruleID {
 					found = true
 					break
