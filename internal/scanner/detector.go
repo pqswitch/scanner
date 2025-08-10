@@ -132,9 +132,25 @@ func (d *Detector) Scan(scanConfig *Config) error {
 func (d *Detector) CollectFiles(path string) ([]string, error) {
 	var files []string
 
+	// Basic recursion depth protection
+	const maxWalkDepth = 30
+	rootClean := filepath.Clean(path)
+	rootDepth := strings.Count(rootClean, string(os.PathSeparator))
+
 	err := filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+
+		// Skip symlinks entirely to avoid loops
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+
+		// Enforce max recursion depth
+		curDepth := strings.Count(filepath.Clean(filePath), string(os.PathSeparator)) - rootDepth
+		if curDepth > maxWalkDepth {
+			return filepath.SkipDir
 		}
 
 		if info.IsDir() {

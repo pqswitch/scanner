@@ -83,6 +83,17 @@ changelog:
     - title: 'Other work'
       order: 999
 
+# Sign checksum (detached) with Cosign
+signs:
+  - cmd: cosign
+    args:
+      - sign-blob
+      - --key={{ .Env.COSIGN_KEY }}
+      - --output-signature=${signature}
+      - ${artifact}
+    artifacts: checksum
+    output: true
+
 release:
   github:
     owner: pqswitch
@@ -118,6 +129,25 @@ docker_manifests:
     image_templates:
       - "pqswitch/scanner:latest-amd64"
     skip_push: auto
+
+# Generate SBOMs for archives and Docker images
+sboms:
+  - id: sbom-archives
+    artifacts: archive
+  - id: sbom-images
+    artifacts: docker
+
+# Sign Docker images with Cosign
+docker_signs:
+  - cmd: cosign
+    args:
+      - sign
+      - --key={{ .Env.COSIGN_KEY }}
+      - ${artifact}@${digest}
+    artifacts: all
+    output: true
+    env:
+      - COSIGN_EXPERIMENTAL=1
 
 # GitHub
 gitea_urls:

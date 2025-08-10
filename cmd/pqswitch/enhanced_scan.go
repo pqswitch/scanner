@@ -14,6 +14,7 @@ import (
 	"github.com/pqswitch/scanner/internal/scanner"
 	"github.com/pqswitch/scanner/internal/types"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var scanCmd = &cobra.Command{
@@ -62,6 +63,12 @@ var scanConfig struct {
 	parallel    int
 	maxFileSize int64
 	enableML    bool
+
+	// Policy/baseline
+	baselinePath string
+
+	// Resource control
+	timeoutSeconds int
 }
 
 func init() {
@@ -82,6 +89,9 @@ func init() {
 	scanCmd.Flags().BoolVar(&scanConfig.verbose, "verbose", false, "Verbose output")
 	scanCmd.Flags().BoolVar(&scanConfig.showProjectInfo, "show-project-info", false, "Show detected project information")
 
+	// Policy / baseline file
+	scanCmd.Flags().StringVar(&scanConfig.baselinePath, "baseline", "", "Path to baseline suppression file (JSON)")
+
 	// Dependency scanning flags
 	scanCmd.Flags().BoolVar(&scanConfig.includeDependencies, "include-deps", false, "Include dependency vulnerability scanning")
 	scanCmd.Flags().BoolVar(&scanConfig.useExternalTools, "external-tools", false, "Use external tools for dependency scanning")
@@ -91,6 +101,7 @@ func init() {
 	scanCmd.Flags().IntVar(&scanConfig.parallel, "parallel", 0, "Number of parallel workers (0 = auto)")
 	scanCmd.Flags().Int64Var(&scanConfig.maxFileSize, "max-file-size", 0, "Maximum file size to scan in bytes (0 = use config default)")
 	scanCmd.Flags().BoolVar(&scanConfig.enableML, "enable-ml", false, "Enable ML-enhanced detection (experimental)")
+	scanCmd.Flags().IntVar(&scanConfig.timeoutSeconds, "timeout", 0, "Global scan timeout in seconds (0 = no timeout)")
 }
 
 func runScan(cmd *cobra.Command, args []string) error {
@@ -131,7 +142,17 @@ func runScan(cmd *cobra.Command, args []string) error {
 	}
 
 	// Perform crypto scanning
-	cryptoFindings, cryptoErrors, scanDuration, err := performCryptoScan(layeredDetector, files)
+	// Apply global timeout if requested
+	var scanCtx context.Context
+	var cancel context.CancelFunc
+	if scanConfig.timeoutSeconds > 0 {
+		scanCtx, cancel = context.WithTimeout(context.Background(), time.Duration(scanConfig.timeoutSeconds)*time.Second)
+		defer cancel()
+	} else {
+		scanCtx = context.Background()
+	}
+
+	cryptoFindings, cryptoErrors, scanDuration, err := performCryptoScanWithContext(scanCtx, layeredDetector, files)
 	if err != nil {
 		return err
 	}
@@ -144,16 +165,19 @@ func runScan(cmd *cobra.Command, args []string) error {
 			len(cryptoFindings), len(filteredFindings), scanDuration.Seconds())
 	}
 
-	// Perform dependency scanning if enabled
-	dependencyResults, err := performDependencyScanning(scanPath)
-	if err != nil {
-		return err
+	// Perform dependency scanning if enabled and not offline
+	var dependencyResults []*scanner.DependencyScanResult
+	if !viper.GetBool("offline") {
+		dependencyResults, err = performDependencyScanning(scanPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Generate and output results
 	result := &scanner.EnhancedScanResult{
 		ProjectInfo:       projectInfo,
-		CryptoFindings:    filteredFindings,
+		CryptoFindings:    FilterFindingsWithBaseline(filteredFindings, scanConfig.baselinePath),
 		CryptoErrors:      cryptoErrors,
 		DependencyResults: dependencyResults,
 		ScanTime:          time.Now(),
@@ -163,7 +187,19 @@ func runScan(cmd *cobra.Command, args []string) error {
 	// Show benchmark data if requested
 	showBenchmarkResults(files, cryptoFindings, filteredFindings, scanDuration)
 
-	return outputResults(result)
+	if err := outputResults(result); err != nil {
+		return NewCLIError(ExitCodeError, err.Error())
+	}
+
+	if len(result.CryptoFindings) > 0 || len(result.DependencyResults) > 0 {
+		if viper.GetBool("strict_exit_codes") {
+			return NewCLIError(ExitCodeFindingsFound, "Vulnerabilities found")
+		}
+		// Non-strict mode: do not fail the command due to findings
+		return nil
+	}
+
+	return nil
 }
 
 // initializeScanConfig initializes and configures the scan settings
@@ -279,13 +315,14 @@ func collectFilesFromDirectory(scanPath string, projectInfo *scanner.ProjectInfo
 	return files, nil
 }
 
-// performCryptoScan performs the actual crypto vulnerability scanning
-func performCryptoScan(layeredDetector *scanner.LayeredDetector, files []string) ([]types.Finding, []string, time.Duration, error) {
+// (removed) performCryptoScan was replaced by performCryptoScanWithContext
+
+// performCryptoScanWithContext is the same as performCryptoScan but accepts a context with timeout.
+func performCryptoScanWithContext(ctx context.Context, layeredDetector *scanner.LayeredDetector, files []string) ([]types.Finding, []string, time.Duration, error) {
 	startTime := time.Now()
 	var cryptoFindings []types.Finding
 	var cryptoErrors []string
 
-	ctx := context.Background()
 	for i, file := range files {
 		if scanConfig.verbose && i%50 == 0 {
 			fmt.Printf("📄 Scanning file %d/%d...\n", i+1, len(files))
@@ -586,6 +623,26 @@ func outputPretty(result *scanner.EnhancedScanResult) error {
 }
 
 func outputSarif(result *scanner.EnhancedScanResult) error {
+	// Build unique rule definitions from findings
+	ruleIndexByID := make(map[string]int)
+	var rules []map[string]interface{}
+	for _, f := range result.CryptoFindings {
+		if _, ok := ruleIndexByID[f.RuleID]; ok {
+			continue
+		}
+		idx := len(rules)
+		ruleIndexByID[f.RuleID] = idx
+		rules = append(rules, map[string]interface{}{
+			"id":               f.RuleID,
+			"name":             f.RuleID,
+			"shortDescription": map[string]string{"text": f.Message},
+			"fullDescription":  map[string]string{"text": fmt.Sprintf("%s (%s)", f.Message, f.Severity)},
+			"properties": map[string]interface{}{
+				"precision": "very-high",
+			},
+		})
+	}
+
 	// SARIF (Static Analysis Results Interchange Format) output
 	sarif := map[string]interface{}{
 		"version": "2.1.0",
@@ -596,15 +653,13 @@ func outputSarif(result *scanner.EnhancedScanResult) error {
 					"driver": map[string]interface{}{
 						"name":    "PQSwitch",
 						"version": "2.0.0",
-						"rules": []map[string]interface{}{
-							{
-								"id":               "pqswitch-crypto",
-								"name":             "CryptographicVulnerability",
-								"shortDescription": map[string]string{"text": "Cryptographic vulnerability detected"},
-								"fullDescription":  map[string]string{"text": "Classical cryptographic implementation that needs post-quantum migration"},
-							},
-						},
+						"rules":   rules,
 					},
+				},
+				// Provide a stable category/id per run for GitHub ingestion
+				"automationDetails": map[string]interface{}{
+					"id":   fmt.Sprintf("pqswitch-%d", time.Now().Unix()),
+					"guid": fmt.Sprintf("%d", time.Now().UnixNano()),
 				},
 				"results": []map[string]interface{}{},
 			},
@@ -614,9 +669,13 @@ func outputSarif(result *scanner.EnhancedScanResult) error {
 	// Convert findings to SARIF format
 	var results []map[string]interface{}
 	for _, finding := range result.CryptoFindings {
+		rIndex := 0
+		if idx, ok := ruleIndexByID[finding.RuleID]; ok {
+			rIndex = idx
+		}
 		sarifResult := map[string]interface{}{
 			"ruleId":    finding.RuleID,
-			"ruleIndex": 0,
+			"ruleIndex": rIndex,
 			"message":   map[string]string{"text": finding.Message},
 			"level":     getSarifLevel(finding.Severity),
 			"locations": []map[string]interface{}{
@@ -637,6 +696,10 @@ func outputSarif(result *scanner.EnhancedScanResult) error {
 				"cryptoType": finding.CryptoType,
 				"confidence": finding.Confidence,
 				"suggestion": finding.Suggestion,
+			},
+			// Simple fingerprint to aid deduplication
+			"partialFingerprints": map[string]string{
+				"primaryLocationLineHash": fmt.Sprintf("%s:%d", finding.File, finding.Line),
 			},
 		}
 		results = append(results, sarifResult)

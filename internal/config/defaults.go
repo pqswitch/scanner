@@ -25,6 +25,7 @@ type ScannerConfig struct {
 	Parallel       int      `mapstructure:"parallel"`
 	EnableAST      bool     `mapstructure:"enable_ast"`
 	EnableDataFlow bool     `mapstructure:"enable_dataflow"`
+	Offline        bool     `mapstructure:"offline"`
 }
 
 // RulesConfig holds rules configuration
@@ -140,6 +141,7 @@ func setDefaults() {
 	viper.SetDefault("scanner.parallel", 4)
 	viper.SetDefault("scanner.enable_ast", false)      // Disabled by default for stability
 	viper.SetDefault("scanner.enable_dataflow", false) // L2 dataflow analysis disabled by default
+	viper.SetDefault("scanner.offline", false)
 
 	// Rules defaults
 	viper.SetDefault("rules.default_rules_path", "internal/scanner/rules")
@@ -179,6 +181,7 @@ func getDefaults() *Config {
 			Parallel:       4,
 			EnableAST:      false, // Disabled by default for stability
 			EnableDataFlow: false, // L2 dataflow analysis disabled by default
+			Offline:        false,
 		},
 		Rules: RulesConfig{
 			DefaultRulesPath: "internal/scanner/rules",

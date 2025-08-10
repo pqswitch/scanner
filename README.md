@@ -139,6 +139,38 @@ docker run --rm -v $(pwd):/workspace pqswitch/scanner:latest layered-scan --enab
 - 🔍 **Security audits**: All detection layers and ML confidence scoring
 - ⚡ **Local development**: Lightweight but comprehensive analysis
 
+### Verifying Releases
+
+We publish checksums, Cosign signatures, and SBOMs for every release and container image.
+
+1) Verify checksums (detached, signed):
+
+```bash
+curl -LO https://github.com/pqswitch/scanner/releases/download/vX.Y.Z/checksums.txt
+curl -LO https://github.com/pqswitch/scanner/releases/download/vX.Y.Z/checksums.txt.sig
+cosign verify-blob \
+  --key "$COSIGN_KEY" \
+  --signature checksums.txt.sig \
+  checksums.txt
+sha256sum -c checksums.txt
+```
+
+2) Verify container image signature:
+
+```bash
+cosign verify --key "$COSIGN_KEY" pqswitch/scanner:vX.Y.Z
+```
+
+3) View SBOMs:
+
+```bash
+# Archive SBOM is attached to the GitHub release assets
+# For container image SBOM (CycloneDX):
+syft pqswitch/scanner:vX.Y.Z -o cyclonedx-json | jq . > sbom.json
+```
+
+Note: Set `COSIGN_EXPERIMENTAL=1` if using keyless or experimental flows.
+
 ## 📖 Comprehensive Usage Guide
 
 ### 🎯 **Scan Modes for Different Use Cases**
@@ -192,6 +224,7 @@ scanner:
   enable_dataflow: false    # Enable data flow analysis (L2)
   min_confidence: 0.3       # ML confidence threshold
   parallel: 4               # Parallel processing
+  offline: false            # Disable all network access (Snyk/OpenAI/etc.)
   
 # Output settings
 output:
@@ -262,9 +295,13 @@ pqswitch layered-scan [PATH] [OPTIONS]
 --enable-l2               Enable data flow analysis (resource intensive)
 --layer string            Detection layer: l0|l1|l2 (default "l1")
 --include-deps            Include dependency vulnerability scanning
+--baseline string         Path to baseline suppression file (JSON)
+--strict-exit-codes       Exit with code 1 when findings exist; 2 on errors
+--offline                 Disable network access/integrations
 --external-tools          Use external security tools (full image only)
 --snyk-token string       Snyk API token for enhanced dependency scanning
 --max-file-size int       Maximum file size to scan in bytes
+--timeout int             Global scan timeout in seconds (0 = no timeout)
 ```
 
 ## 🏗️ Architecture
@@ -384,17 +421,39 @@ The AI evaluator:
 ### Training Your Own Models
 
 ```bash
-# Collect training data
-cd ml-training
-python systematic_scan_parallel.sh
+# Build dataset from local/CI results
+make ml-build-data
 
 # Train models
-cd training
-python train_ml_model.py --data-dir ../results --output-dir ../trained_models
+make ml-train
 
-# Convert to Go format
-python convert_models_to_go.py --input-dir ../trained_models --output-dir ../../internal/ml/models
+# Convert to Go format and embed
+make ml-convert
 ```
+
+### 🔁 How to Retrain (End-to-End)
+
+1) Generate scan results to use as training signals (local or CI). Any of these folders will be picked up automatically if present:
+   - `results/`
+   - `ai_evaluation/results`, `ai_evaluation_high_conf/results`, `ai_evaluation_comprehensive/results`, `ai_evaluation_reliable/results`, `ai_evaluation_monitored/results`
+
+2) Build the training dataset:
+   ```bash
+   make ml-build-data
+   ```
+
+3) Train the models:
+   ```bash
+   make ml-train
+   ```
+
+4) Convert and embed model parameters into the CLI:
+   ```bash
+   make ml-convert
+   make build
+   ```
+
+CI automation: `.github/workflows/train-ml-models.yml` also builds data (creates a small sample if S3 data isn’t available), trains, converts, and optionally uploads artifacts. Trigger with `workflow_dispatch` or on pushes changing `ml-training/**`.
 
 ## 🛠️ Development
 

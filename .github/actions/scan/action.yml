@@ -1,0 +1,29 @@
+name: "PQSwitch Scan"
+description: "Run PQSwitch post-quantum crypto scan"
+inputs:
+  path:
+    description: "Path to scan"
+    required: false
+    default: "."
+  output:
+    description: "Output format (json|sarif|text)"
+    required: false
+    default: "sarif"
+  output-file:
+    description: "Output file path"
+    required: false
+    default: "pqswitch-results.sarif"
+  min-confidence:
+    description: "Minimum confidence threshold"
+    required: false
+    default: "0.3"
+runs:
+  using: "composite"
+  steps:
+    - name: Run PQSwitch
+      shell: bash
+      run: |
+        pqswitch scan "${{ inputs.path }}" \
+          --output "${{ inputs.output }}" \
+          --output-file "${{ inputs['output-file'] }}" \
+          --min-confidence "${{ inputs['min-confidence'] }}"

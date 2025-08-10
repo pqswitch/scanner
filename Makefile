@@ -57,6 +57,51 @@ deps: ## Download and verify dependencies
 		mv ml-training-backup ml-training; \
 	fi
 
+# =====================
+# ML Training Pipeline
+# =====================
+
+PY ?= python3
+ML_DIR := ml-training
+ML_TRAIN_DIR := $(ML_DIR)/training
+ML_DATA_OUT := $(ML_DIR)/ml_training
+ML_MODELS_DIR := internal/ml/models
+
+# Include results from local and CI evaluation folders if present
+ML_DATA_SOURCES := results \
+  ml-training/results \
+  ai_evaluation/results \
+  ai_evaluation_high_conf/results \
+  ai_evaluation_comprehensive/results \
+  ai_evaluation_reliable/results \
+  ai_evaluation_monitored/results
+
+.PHONY: ml-build-data ml-train ml-convert ml-embed ml-all
+
+ml-build-data: ## Build ML training dataset from results folders
+	@mkdir -p $(ML_DATA_OUT)
+	@set -e; \
+	for d in $(ML_DATA_SOURCES); do \
+	  if [ -d "$$d" ]; then \
+	    echo "🔧 Building ML training data from $$d"; \
+	    (cd $(ML_TRAIN_DIR) && $(PY) build_ml_training_data.py --results-dir ../../$$d --output-dir ../ml_training --verbose) || true; \
+	  else \
+	    echo "(skip) $$d not found"; \
+	  fi; \
+	done
+
+ml-train: ## Train ML models using prepared dataset
+	@echo "🧠 Training ML models"
+	@cd $(ML_TRAIN_DIR) && $(PY) train_ml_model.py --data-dir ../ml_training --output-dir ../ml_training --verbose
+
+ml-convert ml-embed: ## Convert trained models to embeddable Go format
+	@echo "🔄 Converting trained models to embeddable format"
+	@mkdir -p $(ML_MODELS_DIR)
+	@cd $(ML_TRAIN_DIR) && $(PY) convert_models_to_go.py --input-dir ../ml_training --output-dir ../../$(ML_MODELS_DIR) --verbose
+
+ml-all: ml-build-data ml-train ml-convert ## Run full ML pipeline
+	@echo "✅ ML pipeline completed"
+
 build: deps ## Build the binary
 	@echo "🔨 Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
@@ -178,11 +223,11 @@ docker-push: docker-build ## Push Docker image
 
 release-dry: ## Dry run release
 	@echo "🚀 Dry run release..."
-	goreleaser release --snapshot --rm-dist
+	goreleaser release --snapshot --clean
 
 release: ## Create release
 	@echo "🚀 Creating release..."
-	goreleaser release --rm-dist
+	goreleaser release --clean
 
 release-local: build-all ## Create local release artifacts
 	@echo "📦 Creating local release artifacts..."

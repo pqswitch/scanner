@@ -13,6 +13,7 @@ import (
 	"github.com/pqswitch/scanner/internal/scanner"
 	"github.com/pqswitch/scanner/internal/types"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // layeredScanCmd represents the layered scan command
@@ -56,6 +57,7 @@ var (
 	layeredTopFindings   int
 	layeredVerbose       bool
 	layeredShowStages    bool
+	layeredBaselinePath  string
 )
 
 func init() {
@@ -78,6 +80,8 @@ func init() {
 	layeredScanCmd.Flags().BoolVar(&layeredShowBenchmark, "show-benchmark", false, "Show performance benchmark report")
 	layeredScanCmd.Flags().BoolVar(&layeredShowStages, "show-stages", false, "Show which stages were executed for each file")
 	layeredScanCmd.Flags().BoolVarP(&layeredVerbose, "verbose", "v", false, "Verbose output with detailed progress")
+	// Policy / baseline
+	layeredScanCmd.Flags().StringVar(&layeredBaselinePath, "baseline", "", "Path to baseline suppression file (JSON)")
 }
 
 func runLayeredScan(cmd *cobra.Command, args []string) error {
@@ -114,108 +118,14 @@ func runLayeredScan(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create layered detector
-	detector := scanner.NewLayeredDetector(cfg)
-
-	// Load crypto detection rules
-	rulesPath := cfg.Rules.DefaultRulesPath
-	if err := detector.LoadRules(rulesPath); err != nil {
-		return fmt.Errorf("failed to load rules: %w", err)
-	}
-
-	// Analyze project structure
-	if layeredVerbose {
-		fmt.Println("🔎 Analyzing project structure...")
-	}
-
-	projectCtx, err := analyzeProjectStructure(scanPath)
+	detector, err := initScanner(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to analyze project: %w", err)
+		return err
 	}
 
-	if layeredVerbose {
-		displayProjectAnalysis(projectCtx)
-	}
+	allFindings, errors, stageStats, projectCtx, files := collectAndAnalyzeFiles(scanPath, layeredVerbose, cfg, detector)
 
-	// Collect files for scanning
-	files, err := collectFilesForScanning(scanPath, cfg)
-	if err != nil {
-		return fmt.Errorf("failed to collect files: %w", err)
-	}
-
-	if layeredVerbose {
-		fmt.Printf("📄 Found %d files to scan (after exclusions)\n", len(files))
-		fmt.Println()
-	}
-
-	// Perform layered scanning
-	ctx := context.Background()
-	var allFindings []types.Finding
-	var stageStats = make(map[string]int)
-	var errors []string
-
-	if layeredVerbose {
-		fmt.Println("🚀 Starting layered analysis...")
-	}
-
-	for i, file := range files {
-		if layeredVerbose && i%100 == 0 && i > 0 {
-			fmt.Printf("   Progress: %d/%d files processed\n", i, len(files))
-		}
-
-		// Create file context
-		fileCtx, err := createFileContext(file, projectCtx)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("Failed to create context for %s: %v", file, err))
-			continue
-		}
-
-		// Perform layered analysis
-		result, err := detector.AnalyzeFile(ctx, fileCtx)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("Analysis failed for %s: %v", file, err))
-			continue
-		}
-
-		// Track stage statistics
-		stageName := stageToString(result.Stage)
-		stageStats[stageName]++
-
-		// Collect findings
-		allFindings = append(allFindings, result.Findings...)
-
-		if layeredShowStages && len(result.Findings) > 0 {
-			fmt.Printf("   %s: %s (%d findings)\n", stageName, filepath.Base(file), len(result.Findings))
-		}
-	}
-
-	// Apply ML confidence scoring if enabled
-	if layeredEnableML {
-		if layeredVerbose {
-			fmt.Println("🧠 Applying ML confidence scoring...")
-		}
-
-		mlScorer := scanner.NewMLConfidenceScorer(cfg)
-		// Apply ML scoring to all findings with average file context
-		dummyCtx := &scanner.FileContext{Language: "unknown"}
-		allFindings = mlScorer.ScoreFindings(allFindings, dummyCtx)
-	}
-
-	// Filter findings by confidence
-	filteredFindings := filterFindingsByConfidence(allFindings, layeredMinConfidence)
-
-	// Sort by confidence (highest first)
-	for i := 0; i < len(filteredFindings); i++ {
-		for j := i + 1; j < len(filteredFindings); j++ {
-			if filteredFindings[i].Confidence < filteredFindings[j].Confidence {
-				filteredFindings[i], filteredFindings[j] = filteredFindings[j], filteredFindings[i]
-			}
-		}
-	}
-
-	// Limit to top findings if requested
-	if layeredTopFindings > 0 && len(filteredFindings) > layeredTopFindings {
-		filteredFindings = filteredFindings[:layeredTopFindings]
-	}
+	filteredFindings := processAndFilterFindings(allFindings, cfg)
 
 	// Generate results
 	duration := time.Since(startTime)
@@ -255,7 +165,123 @@ func runLayeredScan(cmd *cobra.Command, args []string) error {
 	}
 
 	// Output results
-	return outputLayeredResults(results)
+	if err := outputLayeredResults(results); err != nil {
+		return NewCLIError(ExitCodeError, err.Error())
+	}
+
+	if len(results.Findings) > 0 {
+		if viper.GetBool("strict_exit_codes") {
+			return NewCLIError(ExitCodeFindingsFound, "Vulnerabilities found")
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func processAndFilterFindings(allFindings []types.Finding, cfg *config.Config) []types.Finding {
+	if layeredEnableML {
+		if layeredVerbose {
+			fmt.Println("🧠 Applying ML confidence scoring...")
+		}
+
+		mlScorer := scanner.NewMLConfidenceScorer(cfg)
+		// Apply ML scoring to all findings with average file context
+		dummyCtx := &scanner.FileContext{Language: "unknown"}
+		allFindings = mlScorer.ScoreFindings(allFindings, dummyCtx)
+	}
+
+	filteredFindings := filterFindingsByConfidence(allFindings, layeredMinConfidence)
+	// Apply baseline suppressions if provided
+	if layeredBaselinePath != "" {
+		filteredFindings = FilterFindingsWithBaseline(filteredFindings, layeredBaselinePath)
+	}
+
+	for i := 0; i < len(filteredFindings); i++ {
+		for j := i + 1; j < len(filteredFindings); j++ {
+			if filteredFindings[i].Confidence < filteredFindings[j].Confidence {
+				filteredFindings[i], filteredFindings[j] = filteredFindings[j], filteredFindings[i]
+			}
+		}
+	}
+
+	if layeredTopFindings > 0 && len(filteredFindings) > layeredTopFindings {
+		filteredFindings = filteredFindings[:layeredTopFindings]
+	}
+
+	return filteredFindings
+}
+
+func collectAndAnalyzeFiles(scanPath string, layeredVerbose bool, cfg *config.Config, detector *scanner.LayeredDetector) ([]types.Finding, []string, map[string]int, *scanner.ProjectContext, []string) {
+	if layeredVerbose {
+		fmt.Println("🔎 Analyzing project structure...")
+	}
+
+	projectCtx, err := analyzeProjectStructure(scanPath)
+	if err != nil {
+		return nil, []string{fmt.Sprintf("failed to analyze project: %v", err)}, nil, nil, nil
+	}
+
+	if layeredVerbose {
+		displayProjectAnalysis(projectCtx)
+	}
+
+	files, err := collectFilesForScanning(scanPath, cfg)
+	if err != nil {
+		return nil, []string{fmt.Sprintf("failed to collect files: %v", err)}, nil, projectCtx, nil
+	}
+
+	if layeredVerbose {
+		fmt.Printf("📄 Found %d files to scan (after exclusions)\n", len(files))
+		fmt.Println()
+	}
+
+	ctx := context.Background()
+	var allFindings []types.Finding
+	var stageStats = make(map[string]int)
+	var errors []string
+
+	if layeredVerbose {
+		fmt.Println("🚀 Starting layered analysis...")
+	}
+
+	for i, file := range files {
+		if layeredVerbose && i%100 == 0 && i > 0 {
+			fmt.Printf("   Progress: %d/%d files processed\n", i, len(files))
+		}
+
+		fileCtx, err := createFileContext(file, projectCtx)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Failed to create context for %s: %v", file, err))
+			continue
+		}
+
+		result, err := detector.AnalyzeFile(ctx, fileCtx)
+		if err != nil {
+			errors = append(errors, fmt.Sprintf("Analysis failed for %s: %v", file, err))
+			continue
+		}
+
+		stageName := stageToString(result.Stage)
+		stageStats[stageName]++
+
+		allFindings = append(allFindings, result.Findings...)
+
+		if layeredShowStages && len(result.Findings) > 0 {
+			fmt.Printf("   %s: %s (%d findings)\n", stageName, filepath.Base(file), len(result.Findings))
+		}
+	}
+
+	return allFindings, errors, stageStats, projectCtx, files
+}
+
+func initScanner(cfg *config.Config) (*scanner.LayeredDetector, error) {
+	detector := scanner.NewLayeredDetector(cfg)
+	rulesPath := cfg.Rules.DefaultRulesPath
+	if err := detector.LoadRules(rulesPath); err != nil {
+		return nil, fmt.Errorf("failed to load rules: %w", err)
+	}
+	return detector, nil
 }
 
 // Layered result types

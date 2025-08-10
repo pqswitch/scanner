@@ -608,6 +608,142 @@ func (ml *MLConfidenceScorer) GetTopFindings(findings []types.Finding, limit int
 	return sortedFindings[:limit]
 }
 
+var highConfidencePatterns = []string{
+	"class ", "struct ", "final :", "public ", "private ", "protected ",
+	"algorithm", "cipher", "digest", "hash", "encrypt", "decrypt",
+	"keygen", "sign", "verify", "transform", "init", "update",
+	"processblock", "reset", "doFinal", "getAlgorithmName",
+	"getDigestSize", "getBlockSize", "getKeySize",
+	"return \"", "implements ", "extends ",
+
+	// Rust-specific patterns
+	"impl ", "trait ", "struct ", "enum ", "pub fn", "fn ",
+	"use ring::", "use aws_lc_rs::", "use rustcrypto::",
+	"KeyPair", "PrivateKey", "PublicKey", "Signature",
+	"&dyn ", "Box<", "Result<", "Option<",
+
+	// Go-specific patterns
+	"package ", "func ", "type ", "var ", "const ",
+	"func New", "func (", ") Write(", ") Sum(", ") Reset(",
+	"crypto.RegisterHash", "hash.Hash", "cipher.Block",
+	"interface{}", "[]byte", "import \"",
+
+	// Java-specific patterns
+	"public class ", "private class ", "interface ", "abstract class ",
+	"public void ", "private void ", "protected void ",
+	"public int ", "public byte[]", "implements ",
+	"extends ", "package ", "import ",
+	"@Override", "throws ", "final class ",
+	"static final ", "public final ",
+
+	// Bouncy Castle specific patterns
+	"extends Engine", "implements Digest", "implements BlockCipher",
+	"implements StreamCipher", "implements AsymmetricBlockCipher",
+	"implements Signer", "implements DSA", "implements BasicAgreement",
+	"CipherParameters", "KeyParameter", "ParametersWithIV",
+	"AsymmetricKeyParameter", "ECKeyParameters", "RSAKeyParameters",
+	"AsymmetricCipherKeyPair", "KeyGenerationParameters",
+	"CryptoException", "DataLengthException", "InvalidCipherTextException",
+	"SecurityServicesRegistrar", "CryptoServicesRegistrar",
+
+	// JavaScript/Node.js specific patterns
+	"function ", "const ", "let ", "var ", "module.exports",
+	"require(", "internalBinding(", "exports.", "this.",
+	"new Hash(", "new Hmac(", "new RSACipherJob(", "new AESCipherJob(",
+	"asyncDigest", "jobPromise", "kCryptoJobAsync", "kKeyVariant",
+	"crypto.createHash", "crypto.createCipher", "crypto.generateKeyPair",
+	"subtle.digest", "subtle.encrypt", "subtle.decrypt", "subtle.sign",
+	"WebCrypto", "CryptoKey", "SubtleCrypto", "getRandomValues",
+	"validateString", "validateUint32", "validateMaxBufferLength",
+	"lazyDOMException", "normalizeHashName", "normalizeEncoding",
+	"ReflectApply", "ObjectSetPrototypeOf", "StringPrototypeToLowerCase",
+}
+
+var mediumConfidencePatterns = []string{
+	"engine", "signer", "generator", "parameters", "wrapper",
+	"keysize", "blocksize", "ivsize", "tagsize",
+	"process", "update", "finish", "output", "input",
+	"validate", "verify", "compute", "derive",
+	"encode", "decode", "wrap", "unwrap",
+	"mac", "hmac", "kdf", "hkdf", "pbkdf2", "scrypt",
+	"mode", "padding", "encoding", "agreement",
+
+	// Java method patterns
+	"getString", "getBytes", "getInstance", "newInstance",
+	"toByteArray", "toString", "valueOf", "parseInt",
+	"System.arraycopy", "Arrays.fill", "Math.max", "Math.min",
+
+	// Bouncy Castle method patterns
+	"processBytes", "doFinal", "getOutputSize", "init",
+	"getAlgorithmName", "reset", "getDigestSize", "getBlockSize",
+}
+
+func extractJavaImplementationFeatures(contextLower string, score *float64) {
+	javaPatterns := []string{
+		"public class", "implements", "extends", "package org.bouncycastle",
+		"import org.bouncycastle", "@Override", "throws Exception",
+		"final class", "abstract class", "interface",
+	}
+	for _, pattern := range javaPatterns {
+		if strings.Contains(contextLower, pattern) {
+			*score += 0.1 // Java-specific bonus
+		}
+	}
+}
+
+func extractRustImplementationFeatures(contextLower string, score *float64) {
+	rustPatterns := []string{
+		"impl ", "trait ", "pub struct", "pub enum", "pub fn",
+		"use ring::", "use aws_lc_rs::", "Result<", "Option<",
+	}
+	for _, pattern := range rustPatterns {
+		if strings.Contains(contextLower, pattern) {
+			*score += 0.1 // Rust-specific bonus
+		}
+	}
+}
+
+func extractGoImplementationFeatures(contextLower string, score *float64) {
+	goPatterns := []string{
+		"package ", "func ", "type ", "interface", "struct",
+		"crypto.RegisterHash", "hash.Hash", "[]byte",
+	}
+	for _, pattern := range goPatterns {
+		if strings.Contains(contextLower, pattern) {
+			*score += 0.1 // Go-specific bonus
+		}
+	}
+}
+
+func extractCImplementationFeatures(contextLower string, score *float64) {
+	cPatterns := []string{
+		"class ", "struct ", "typedef ", "#include", "extern ",
+		"static ", "inline ", "const ", "void *", "unsigned char",
+	}
+	for _, pattern := range cPatterns {
+		if strings.Contains(contextLower, pattern) {
+			*score += 0.1 // C/C++-specific bonus
+		}
+	}
+}
+
+func extractJSImplementationFeatures(contextLower string, score *float64) {
+	jsPatterns := []string{
+		"function ", "const ", "let ", "var ", "module.exports",
+		"require(", "import ", "export ", "async ", "await ",
+		"internalBinding(", "jobPromise(", "lazyDOMException",
+		"crypto.createHash", "crypto.generateKeyPair", "new Hash(",
+		"validateString", "validateUint32", "normalizeHashName",
+		"ObjectSetPrototypeOf", "ReflectApply", "primordials",
+		"internal/crypto/", "internal/util", "internal/validators",
+	}
+	for _, pattern := range jsPatterns {
+		if strings.Contains(contextLower, pattern) {
+			*score += 0.1 // JavaScript-specific bonus
+		}
+	}
+}
+
 // extractLibraryImplementationFeature detects crypto library implementation patterns
 func (ml *MLConfidenceScorer) extractLibraryImplementationFeature(context string, fileCtx *FileContext) float64 {
 	// If we're in library analysis mode, look for implementation patterns
@@ -616,78 +752,6 @@ func (ml *MLConfidenceScorer) extractLibraryImplementationFeature(context string
 	}
 
 	contextLower := strings.ToLower(context)
-
-	// High confidence patterns for crypto library implementations
-	highConfidencePatterns := []string{
-		"class ", "struct ", "final :", "public ", "private ", "protected ",
-		"algorithm", "cipher", "digest", "hash", "encrypt", "decrypt",
-		"keygen", "sign", "verify", "transform", "init", "update",
-		"processblock", "reset", "doFinal", "getAlgorithmName",
-		"getDigestSize", "getBlockSize", "getKeySize",
-		"return \"", "implements ", "extends ",
-
-		// Rust-specific patterns
-		"impl ", "trait ", "struct ", "enum ", "pub fn", "fn ",
-		"use ring::", "use aws_lc_rs::", "use rustcrypto::",
-		"KeyPair", "PrivateKey", "PublicKey", "Signature",
-		"&dyn ", "Box<", "Result<", "Option<",
-
-		// Go-specific patterns
-		"package ", "func ", "type ", "var ", "const ",
-		"func New", "func (", ") Write(", ") Sum(", ") Reset(",
-		"crypto.RegisterHash", "hash.Hash", "cipher.Block",
-		"interface{}", "[]byte", "import \"",
-
-		// Java-specific patterns
-		"public class ", "private class ", "interface ", "abstract class ",
-		"public void ", "private void ", "protected void ",
-		"public int ", "public byte[]", "implements ",
-		"extends ", "package ", "import ",
-		"@Override", "throws ", "final class ",
-		"static final ", "public final ",
-
-		// Bouncy Castle specific patterns
-		"extends Engine", "implements Digest", "implements BlockCipher",
-		"implements StreamCipher", "implements AsymmetricBlockCipher",
-		"implements Signer", "implements DSA", "implements BasicAgreement",
-		"CipherParameters", "KeyParameter", "ParametersWithIV",
-		"AsymmetricKeyParameter", "ECKeyParameters", "RSAKeyParameters",
-		"AsymmetricCipherKeyPair", "KeyGenerationParameters",
-		"CryptoException", "DataLengthException", "InvalidCipherTextException",
-		"SecurityServicesRegistrar", "CryptoServicesRegistrar",
-
-		// JavaScript/Node.js specific patterns
-		"function ", "const ", "let ", "var ", "module.exports",
-		"require(", "internalBinding(", "exports.", "this.",
-		"new Hash(", "new Hmac(", "new RSACipherJob(", "new AESCipherJob(",
-		"asyncDigest", "jobPromise", "kCryptoJobAsync", "kKeyVariant",
-		"crypto.createHash", "crypto.createCipher", "crypto.generateKeyPair",
-		"subtle.digest", "subtle.encrypt", "subtle.decrypt", "subtle.sign",
-		"WebCrypto", "CryptoKey", "SubtleCrypto", "getRandomValues",
-		"validateString", "validateUint32", "validateMaxBufferLength",
-		"lazyDOMException", "normalizeHashName", "normalizeEncoding",
-		"ReflectApply", "ObjectSetPrototypeOf", "StringPrototypeToLowerCase",
-	}
-
-	// Medium confidence patterns
-	mediumConfidencePatterns := []string{
-		"engine", "signer", "generator", "parameters", "wrapper",
-		"keysize", "blocksize", "ivsize", "tagsize",
-		"process", "update", "finish", "output", "input",
-		"validate", "verify", "compute", "derive",
-		"encode", "decode", "wrap", "unwrap",
-		"mac", "hmac", "kdf", "hkdf", "pbkdf2", "scrypt",
-		"mode", "padding", "encoding", "agreement",
-
-		// Java method patterns
-		"getString", "getBytes", "getInstance", "newInstance",
-		"toByteArray", "toString", "valueOf", "parseInt",
-		"System.arraycopy", "Arrays.fill", "Math.max", "Math.min",
-
-		// Bouncy Castle method patterns
-		"processBytes", "doFinal", "getOutputSize", "init",
-		"getAlgorithmName", "reset", "getDigestSize", "getBlockSize",
-	}
 
 	// Count pattern matches
 	score := 0.0
@@ -712,73 +776,27 @@ func (ml *MLConfidenceScorer) extractLibraryImplementationFeature(context string
 
 		// Java implementation patterns
 		if strings.HasSuffix(fileExtension, ".java") {
-			javaPatterns := []string{
-				"public class", "implements", "extends", "package org.bouncycastle",
-				"import org.bouncycastle", "@Override", "throws Exception",
-				"final class", "abstract class", "interface",
-			}
-			for _, pattern := range javaPatterns {
-				if strings.Contains(contextLower, pattern) {
-					score += 0.1 // Java-specific bonus
-				}
-			}
+			extractJavaImplementationFeatures(contextLower, &score)
 		}
 
 		// Rust implementation patterns
 		if strings.HasSuffix(fileExtension, ".rs") {
-			rustPatterns := []string{
-				"impl ", "trait ", "pub struct", "pub enum", "pub fn",
-				"use ring::", "use aws_lc_rs::", "Result<", "Option<",
-			}
-			for _, pattern := range rustPatterns {
-				if strings.Contains(contextLower, pattern) {
-					score += 0.1 // Rust-specific bonus
-				}
-			}
+			extractRustImplementationFeatures(contextLower, &score)
 		}
 
 		// Go implementation patterns
 		if strings.HasSuffix(fileExtension, ".go") {
-			goPatterns := []string{
-				"package ", "func ", "type ", "interface", "struct",
-				"crypto.RegisterHash", "hash.Hash", "[]byte",
-			}
-			for _, pattern := range goPatterns {
-				if strings.Contains(contextLower, pattern) {
-					score += 0.1 // Go-specific bonus
-				}
-			}
+			extractGoImplementationFeatures(contextLower, &score)
 		}
 
 		// C/C++ implementation patterns
 		if strings.HasSuffix(fileExtension, ".c") || strings.HasSuffix(fileExtension, ".cpp") || strings.HasSuffix(fileExtension, ".h") {
-			cPatterns := []string{
-				"class ", "struct ", "typedef ", "#include", "extern ",
-				"static ", "inline ", "const ", "void *", "unsigned char",
-			}
-			for _, pattern := range cPatterns {
-				if strings.Contains(contextLower, pattern) {
-					score += 0.1 // C/C++-specific bonus
-				}
-			}
+			extractCImplementationFeatures(contextLower, &score)
 		}
 
 		// JavaScript/Node.js implementation patterns
 		if strings.HasSuffix(fileExtension, ".js") || strings.HasSuffix(fileExtension, ".ts") {
-			jsPatterns := []string{
-				"function ", "const ", "let ", "var ", "module.exports",
-				"require(", "import ", "export ", "async ", "await ",
-				"internalBinding(", "jobPromise(", "lazyDOMException",
-				"crypto.createHash", "crypto.generateKeyPair", "new Hash(",
-				"validateString", "validateUint32", "normalizeHashName",
-				"ObjectSetPrototypeOf", "ReflectApply", "primordials",
-				"internal/crypto/", "internal/util", "internal/validators",
-			}
-			for _, pattern := range jsPatterns {
-				if strings.Contains(contextLower, pattern) {
-					score += 0.1 // JavaScript-specific bonus
-				}
-			}
+			extractJSImplementationFeatures(contextLower, &score)
 		}
 	}
 

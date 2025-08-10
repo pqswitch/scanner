@@ -81,8 +81,8 @@ RUN chown -R pqswitch:pqswitch /app /usr/local/share/pqswitch && \
     chown pqswitch:pqswitch /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin && \
     chmod 755 /usr/local/bin/pqswitch /usr/local/bin/pqswitch-bin
 
-# Run as root for ECS compatibility (ECS handles security isolation)
-# USER pqswitch
+# Run as non-root (recommended). Override to root only if your runtime requires it.
+USER pqswitch
 
 # Set working directory for scans
 WORKDIR /workspace

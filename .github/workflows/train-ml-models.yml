@@ -155,18 +155,16 @@ jobs:
         
     - name: Build ML training data
       run: |
-        cd ml-training/training
-        python build_ml_training_data.py --results-dir ../results --output-dir ../ml_training --verbose
+        echo "🔧 Building ML dataset via Makefile (aggregates local ai_evaluation*/results if present)"
+        make ml-build-data || true
         
     - name: Train ML models
       run: |
-        cd ml-training/training
-        python train_ml_model.py --data-dir ../ml_training --output-dir ../ml_training --verbose
+        make ml-train
         
     - name: Convert models to Go format
       run: |
-        cd ml-training/training
-        python convert_models_to_go.py --input-dir ../ml_training --output-dir ../../internal/ml/models --verbose
+        make ml-convert
         
     - name: Upload trained models to S3
       id: s3_upload

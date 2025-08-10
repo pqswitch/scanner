@@ -60,33 +60,33 @@ func getSeverityWeight(severity string) int {
 // getAlgorithmCriticality returns criticality score for post-quantum migration priority
 func getAlgorithmCriticality(algorithm string) int {
 	alg := strings.ToLower(algorithm)
-	
+
 	// Highest priority: Asymmetric crypto that's quantum-vulnerable
-	if strings.Contains(alg, "rsa") || strings.Contains(alg, "ecdsa") || 
-	   strings.Contains(alg, "ecdh") || strings.Contains(alg, "dh") ||
-	   strings.Contains(alg, "elliptic") || strings.Contains(alg, "curve25519") {
+	if strings.Contains(alg, "rsa") || strings.Contains(alg, "ecdsa") ||
+		strings.Contains(alg, "ecdh") || strings.Contains(alg, "dh") ||
+		strings.Contains(alg, "elliptic") || strings.Contains(alg, "curve25519") {
 		return 10
 	}
-	
+
 	// High priority: Weak symmetric crypto
 	if strings.Contains(alg, "des") || strings.Contains(alg, "3des") ||
-	   strings.Contains(alg, "rc4") || strings.Contains(alg, "md5") ||
-	   strings.Contains(alg, "sha1") {
+		strings.Contains(alg, "rc4") || strings.Contains(alg, "md5") ||
+		strings.Contains(alg, "sha1") {
 		return 8
 	}
-	
+
 	// Medium priority: Signature algorithms
 	if strings.Contains(alg, "signature") || strings.Contains(alg, "sign") ||
-	   strings.Contains(alg, "verify") {
+		strings.Contains(alg, "verify") {
 		return 6
 	}
-	
+
 	// Lower priority: Hash functions (still important but less urgent)
 	if strings.Contains(alg, "sha") || strings.Contains(alg, "hash") ||
-	   strings.Contains(alg, "digest") {
+		strings.Contains(alg, "digest") {
 		return 4
 	}
-	
+
 	// Lowest priority: Other crypto
 	return 2
-} 
+}

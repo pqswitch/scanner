@@ -4,267 +4,172 @@ import (
 	"testing"
 
 	"github.com/pqswitch/scanner/internal/types"
+	"github.com/pqswitch/scanner/test/helpers"
 )
 
-// TestDotNetCryptoDetection validates our C# crypto detection rules for .NET System.Security.Cryptography
-func TestDotNetCryptoDetection(t *testing.T) {
-	// Mock scan results for .NET cryptography patterns
-	mockFindings := []types.Finding{
-		// Critical Legacy/Broken Algorithms (Replace Immediately)
-		{
-			RuleID:    "csharp-md5-usage",
-			Algorithm: "MD5",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "csharp-des-usage",
-			Algorithm: "DES",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "csharp-tripledes-usage",
-			Algorithm: "3DES",
-			Severity:  "critical",
-		},
-		{
-			RuleID:    "csharp-rc2-usage",
-			Algorithm: "RC2",
-			Severity:  "critical",
-		},
+var mockDotNetFindings = []types.Finding{
+	// Critical Legacy/Broken Algorithms (Replace Immediately)
+	{
+		RuleID:    "csharp-md5-usage",
+		Algorithm: "MD5",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "csharp-des-usage",
+		Algorithm: "DES",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "csharp-tripledes-usage",
+		Algorithm: "3DES",
+		Severity:  "critical",
+	},
+	{
+		RuleID:    "csharp-rc2-usage",
+		Algorithm: "RC2",
+		Severity:  "critical",
+	},
 
-		// High Priority Quantum-Vulnerable Asymmetric Algorithms
-		{
-			RuleID:    "csharp-rsa-crypto-service-provider",
-			Algorithm: "RSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "csharp-rsa-key-generation",
-			Algorithm: "RSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "csharp-ecdsa-usage",
-			Algorithm: "ECDSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "csharp-ecdh-usage",
-			Algorithm: "ECDH",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "csharp-dsa-usage",
-			Algorithm: "DSA",
-			Severity:  "high",
-		},
-		{
-			RuleID:    "csharp-sha1-usage",
-			Algorithm: "SHA1",
-			Severity:  "high",
-		},
+	// High Priority Quantum-Vulnerable Asymmetric Algorithms
+	{
+		RuleID:    "csharp-rsa-crypto-service-provider",
+		Algorithm: "RSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "csharp-rsa-key-generation",
+		Algorithm: "RSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "csharp-ecdsa-usage",
+		Algorithm: "ECDSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "csharp-ecdh-usage",
+		Algorithm: "ECDH",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "csharp-dsa-usage",
+		Algorithm: "DSA",
+		Severity:  "high",
+	},
+	{
+		RuleID:    "csharp-sha1-usage",
+		Algorithm: "SHA1",
+		Severity:  "high",
+	},
+
+	// Medium Priority Protocol/Configuration
+	{
+		RuleID:    "csharp-xml-encryption-constants",
+		Algorithm: "XML_ENCRYPTION",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "csharp-hmac-usage",
+		Algorithm: "HMAC",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "csharp-key-exchange-usage",
+		Algorithm: "KEY_EXCHANGE",
+		Severity:  "medium",
+	},
+	{
+		RuleID:    "csharp-hash-algorithm-usage",
+		Algorithm: "HASH_ALGORITHM",
+		Severity:  "medium",
+	},
+
+	// Info Level - Positive Detections and Context
+	{
+		RuleID:    "csharp-aes-usage",
+		Algorithm: "AES",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-rng-usage",
+		Algorithm: "RNG",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-pbkdf2-usage",
+		Algorithm: "PBKDF2",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-crypto-provider-usage",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-certificate-usage",
+		Algorithm: "X509",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-crypto-stream-usage",
+		Algorithm: "CRYPTO_STREAM",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-crypto-exception-usage",
+		Algorithm: "EXCEPTION",
+		Severity:  "info",
+	},
+	{
+		RuleID:    "csharp-crypto-namespace-usage",
+		Algorithm: "various",
+		Severity:  "info",
+	},
+}
+
+func TestDotNetCryptoDetection(t *testing.T) {
+	testCases := []struct {
+		name          string
+		ruleID        string
+		expectedSev   string
+		expectPresent bool
+	}{
+		// Critical Legacy/Broken Algorithms
+		{"csharp-md5-usage", "csharp-md5-usage", "critical", true},
+		{"csharp-des-usage", "csharp-des-usage", "critical", true},
+		{"csharp-tripledes-usage", "csharp-tripledes-usage", "critical", true},
+		{"csharp-rc2-usage", "csharp-rc2-usage", "critical", true},
+
+		// High Priority Quantum-Vulnerable
+		{"csharp-rsa-crypto-service-provider", "csharp-rsa-crypto-service-provider", "high", true},
+		{"csharp-rsa-key-generation", "csharp-rsa-key-generation", "high", true},
+		{"csharp-ecdsa-usage", "csharp-ecdsa-usage", "high", true},
+		{"csharp-ecdh-usage", "csharp-ecdh-usage", "high", true},
+		{"csharp-dsa-usage", "csharp-dsa-usage", "high", true},
+		{"csharp-sha1-usage", "csharp-sha1-usage", "high", true},
 
 		// Medium Priority Protocol/Configuration
-		{
-			RuleID:    "csharp-xml-encryption-constants",
-			Algorithm: "XML_ENCRYPTION",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "csharp-hmac-usage",
-			Algorithm: "HMAC",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "csharp-key-exchange-usage",
-			Algorithm: "KEY_EXCHANGE",
-			Severity:  "medium",
-		},
-		{
-			RuleID:    "csharp-hash-algorithm-usage",
-			Algorithm: "HASH_ALGORITHM",
-			Severity:  "medium",
-		},
+		{"csharp-xml-encryption-constants", "csharp-xml-encryption-constants", "medium", true},
+		{"csharp-hmac-usage", "csharp-hmac-usage", "medium", true},
+		{"csharp-key-exchange-usage", "csharp-key-exchange-usage", "medium", true},
+		{"csharp-hash-algorithm-usage", "csharp-hash-algorithm-usage", "medium", true},
 
 		// Info Level - Positive Detections and Context
-		{
-			RuleID:    "csharp-aes-usage",
-			Algorithm: "AES",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-rng-usage",
-			Algorithm: "RNG",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-pbkdf2-usage",
-			Algorithm: "PBKDF2",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-crypto-provider-usage",
-			Algorithm: "various",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-certificate-usage",
-			Algorithm: "X509",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-crypto-stream-usage",
-			Algorithm: "CRYPTO_STREAM",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-crypto-exception-usage",
-			Algorithm: "EXCEPTION",
-			Severity:  "info",
-		},
-		{
-			RuleID:    "csharp-crypto-namespace-usage",
-			Algorithm: "various",
-			Severity:  "info",
-		},
+		{"csharp-aes-usage", "csharp-aes-usage", "info", true},
+		{"csharp-rng-usage", "csharp-rng-usage", "info", true},
+		{"csharp-pbkdf2-usage", "csharp-pbkdf2-usage", "info", true},
+		{"csharp-crypto-provider-usage", "csharp-crypto-provider-usage", "info", true},
+		{"csharp-certificate-usage", "csharp-certificate-usage", "info", true},
+		{"csharp-crypto-stream-usage", "csharp-crypto-stream-usage", "info", true},
+		{"csharp-crypto-exception-usage", "csharp-crypto-exception-usage", "info", true},
+		{"csharp-crypto-namespace-usage", "csharp-crypto-namespace-usage", "info", true},
 	}
 
-	// Expected algorithm categories for validation
-	criticalAlgorithms := []string{"MD5", "DES", "3DES", "RC2"} // Broken algorithms
-	quantumVulnerableAsymmetric := []string{"RSA", "ECDSA", "ECDH", "DSA"}
-	contextDetectionRules := []string{
-		"csharp-crypto-namespace-usage",
-		"csharp-crypto-provider-usage",
-		"csharp-certificate-usage",
-		"csharp-crypto-stream-usage",
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			helpers.AssertRule(t, mockDotNetFindings, tc.ruleID, tc.expectedSev, tc.expectPresent)
+		})
 	}
-
-	t.Run("CriticalAlgorithmDetection", func(t *testing.T) {
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "critical" {
-				detected[finding.Algorithm] = true
-			}
-		}
-
-		for _, algo := range criticalAlgorithms {
-			if !detected[algo] {
-				t.Errorf("Critical algorithm %s not detected", algo)
-			}
-		}
-
-		if len(detected) < 4 { // MD5, DES, 3DES, RC2
-			t.Errorf("Expected at least 4 critical algorithms, got %d", len(detected))
-		}
-	})
-
-	t.Run("QuantumVulnerableAsymmetricDetection", func(t *testing.T) {
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "high" && contains(quantumVulnerableAsymmetric, finding.Algorithm) {
-				detected[finding.Algorithm] = true
-			}
-		}
-
-		for _, algo := range quantumVulnerableAsymmetric {
-			if !detected[algo] {
-				t.Errorf("Quantum-vulnerable asymmetric algorithm %s not detected", algo)
-			}
-		}
-
-		if len(detected) < 4 {
-			t.Errorf("Expected at least 4 quantum-vulnerable asymmetric algorithms, got %d", len(detected))
-		}
-	})
-
-	t.Run("ContextDetectionRuleValidation", func(t *testing.T) {
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if finding.Severity == "info" && contains(contextDetectionRules, finding.RuleID) {
-				detected[finding.RuleID] = true
-			}
-		}
-
-		for _, rule := range contextDetectionRules {
-			if !detected[rule] {
-				t.Errorf("Context detection rule %s not detected", rule)
-			}
-		}
-	})
-
-	t.Run("CSharpSpecificPatternDetection", func(t *testing.T) {
-		csharpSpecificRules := []string{
-			"csharp-md5-usage",
-			"csharp-sha1-usage",
-			"csharp-des-usage",
-			"csharp-tripledes-usage",
-			"csharp-rc2-usage",
-			"csharp-rsa-crypto-service-provider",
-			"csharp-rsa-key-generation",
-			"csharp-ecdsa-usage",
-			"csharp-ecdh-usage",
-			"csharp-dsa-usage",
-			"csharp-aes-usage",
-			"csharp-rng-usage",
-			"csharp-pbkdf2-usage",
-			"csharp-hmac-usage",
-			"csharp-xml-encryption-constants",
-			"csharp-certificate-usage",
-			"csharp-key-exchange-usage",
-			"csharp-crypto-stream-usage",
-			"csharp-hash-algorithm-usage",
-			"csharp-crypto-exception-usage",
-			"csharp-crypto-provider-usage",
-			"csharp-crypto-namespace-usage",
-		}
-
-		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if hasPrefix(finding.RuleID, "csharp-") {
-				detected[finding.RuleID] = true
-			}
-		}
-
-		for _, rule := range csharpSpecificRules {
-			if !detected[rule] {
-				t.Errorf("C#-specific rule %s not detected", rule)
-			}
-		}
-
-		if len(detected) < 20 {
-			t.Errorf("Expected at least 20 C# rules, got %d", len(detected))
-		}
-	})
-
-	t.Run("SeverityDistributionValidation", func(t *testing.T) {
-		severityCounts := make(map[string]int)
-		for _, finding := range mockFindings {
-			severityCounts[finding.Severity]++
-		}
-
-		// Should have findings across all severity levels
-		expectedSeverities := []string{"critical", "high", "medium", "info"}
-		for _, severity := range expectedSeverities {
-			if severityCounts[severity] == 0 {
-				t.Errorf("No findings with severity %s", severity)
-			}
-		}
-
-		// Critical findings should exist (legacy broken algorithms)
-		if severityCounts["critical"] < 4 {
-			t.Errorf("Expected at least 4 critical findings, got %d", severityCounts["critical"])
-		}
-
-		// High priority findings should dominate (quantum-vulnerable asymmetric)
-		if severityCounts["high"] < 5 {
-			t.Errorf("Expected at least 5 high priority findings, got %d", severityCounts["high"])
-		}
-
-		// Info level should have good representation (positive detections)
-		if severityCounts["info"] < 6 {
-			t.Errorf("Expected at least 6 info level findings, got %d", severityCounts["info"])
-		}
-	})
 
 	t.Run("AlgorithmCategoryValidation", func(t *testing.T) {
 		// Validate comprehensive .NET cryptography coverage
@@ -276,17 +181,17 @@ func TestDotNetCryptoDetection(t *testing.T) {
 			"context":    0, // Context and configuration
 		}
 
-		for _, finding := range mockFindings {
+		for _, finding := range mockDotNetFindings {
 			switch {
-			case contains([]string{"csharp-md5-usage", "csharp-sha1-usage", "csharp-hash-algorithm-usage"}, finding.RuleID):
+			case helpers.Contains([]string{"csharp-md5-usage", "csharp-sha1-usage", "csharp-hash-algorithm-usage"}, finding.RuleID):
 				ruleCategories["hash"]++
-			case contains([]string{"csharp-des-usage", "csharp-tripledes-usage", "csharp-rc2-usage", "csharp-aes-usage"}, finding.RuleID):
+			case helpers.Contains([]string{"csharp-des-usage", "csharp-tripledes-usage", "csharp-rc2-usage", "csharp-aes-usage"}, finding.RuleID):
 				ruleCategories["symmetric"]++
-			case contains([]string{"csharp-rsa-crypto-service-provider", "csharp-rsa-key-generation", "csharp-ecdsa-usage", "csharp-ecdh-usage", "csharp-dsa-usage"}, finding.RuleID):
+			case helpers.Contains([]string{"csharp-rsa-crypto-service-provider", "csharp-rsa-key-generation", "csharp-ecdsa-usage", "csharp-ecdh-usage", "csharp-dsa-usage"}, finding.RuleID):
 				ruleCategories["asymmetric"]++
-			case contains([]string{"csharp-rng-usage", "csharp-pbkdf2-usage", "csharp-hmac-usage"}, finding.RuleID):
+			case helpers.Contains([]string{"csharp-rng-usage", "csharp-pbkdf2-usage", "csharp-hmac-usage"}, finding.RuleID):
 				ruleCategories["support"]++
-			case contains([]string{"csharp-crypto-namespace-usage", "csharp-crypto-provider-usage", "csharp-certificate-usage", "csharp-crypto-stream-usage", "csharp-crypto-exception-usage", "csharp-xml-encryption-constants", "csharp-key-exchange-usage"}, finding.RuleID):
+			case helpers.Contains([]string{"csharp-crypto-namespace-usage", "csharp-crypto-provider-usage", "csharp-certificate-usage", "csharp-crypto-stream-usage", "csharp-crypto-exception-usage", "csharp-xml-encryption-constants", "csharp-key-exchange-usage"}, finding.RuleID):
 				ruleCategories["context"]++
 			}
 		}
@@ -318,8 +223,8 @@ func TestDotNetCryptoDetection(t *testing.T) {
 		}
 
 		detected := 0
-		for _, finding := range mockFindings {
-			if contains(quantumVulnerableRules, finding.RuleID) {
+		for _, finding := range mockDotNetFindings {
+			if helpers.Contains(quantumVulnerableRules, finding.RuleID) {
 				detected++
 			}
 		}
@@ -346,7 +251,7 @@ func TestDotNetCryptoDetection(t *testing.T) {
 		}
 
 		detectedRules := make(map[string]bool)
-		for _, finding := range mockFindings {
+		for _, finding := range mockDotNetFindings {
 			detectedRules[finding.RuleID] = true
 		}
 
@@ -368,8 +273,8 @@ func TestDotNetCryptoDetection(t *testing.T) {
 		}
 
 		detected := make(map[string]bool)
-		for _, finding := range mockFindings {
-			if contains(dotnetSpecificPatterns, finding.RuleID) {
+		for _, finding := range mockDotNetFindings {
+			if helpers.Contains(dotnetSpecificPatterns, finding.RuleID) {
 				detected[finding.RuleID] = true
 			}
 		}
