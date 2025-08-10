@@ -130,12 +130,12 @@ docker_manifests:
       - "pqswitch/scanner:latest-amd64"
     skip_push: auto
 
-# Generate SBOMs for archives and Docker images
+# Generate SBOMs for archives only
+# Note: GoReleaser cannot catalog Docker images in the SBOM step (images are not available in dist).
+#       If image SBOMs are desired, generate them in a separate workflow step after push using syft.
 sboms:
   - id: sbom-archives
     artifacts: archive
-  - id: sbom-images
-    artifacts: docker
 
 # Sign Docker images with Cosign
 docker_signs:
