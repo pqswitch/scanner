@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write  # required for OIDC keyless signing with cosign
 
 env:
   GO_VERSION: '1.24.3'
@@ -54,6 +55,15 @@ jobs:
         distribution: goreleaser
         version: '~> v2' 
         install-only: true
+
+    - name: Install Cosign (keyless signing)
+      uses: sigstore/cosign-installer@v3
+      with:
+        cosign-release: 'v2.2.4'
+    - name: Verify cosign install
+      run: |
+        which cosign || true
+        cosign version
 
     - name: Install Syft (for SBOM generation)
       run: |
