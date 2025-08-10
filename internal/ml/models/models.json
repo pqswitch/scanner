@@ -1,55 +1,7 @@
 {
   "version": "1.0",
   "models": {
-    "severity_encoder": {
-      "type": "linear_regression",
-      "parameters": {
-        "threshold": 0.5,
-        "weights": [
-          0.1,
-          0.2,
-          0.3,
-          0.4
-        ],
-        "intercept": 0.0
-      },
-      "feature_names": [
-        "confidence",
-        "algorithm",
-        "severity",
-        "crypto_type",
-        "language",
-        "rule_id",
-        "line",
-        "file_extension"
-      ],
-      "classes": null
-    },
-    "confidence_predictor": {
-      "type": "linear_regression",
-      "parameters": {
-        "threshold": 0.5,
-        "weights": [
-          0.1,
-          0.2,
-          0.3,
-          0.4
-        ],
-        "intercept": 0.0
-      },
-      "feature_names": [
-        "confidence",
-        "algorithm",
-        "severity",
-        "crypto_type",
-        "language",
-        "rule_id",
-        "line",
-        "file_extension"
-      ],
-      "classes": null
-    },
-    "algorithm_encoder": {
+    "file_extension_encoder": {
       "type": "linear_regression",
       "parameters": {
         "threshold": 0.5,
@@ -97,7 +49,55 @@
       ],
       "classes": null
     },
-    "false_positive_detector": {
+    "confidence_predictor": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "severity_encoder": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
+    "crypto_type_encoder": {
       "type": "linear_regression",
       "parameters": {
         "threshold": 0.5,
@@ -150,6 +150,30 @@
         "critical"
       ]
     },
+    "false_positive_detector": {
+      "type": "linear_regression",
+      "parameters": {
+        "threshold": 0.5,
+        "weights": [
+          0.1,
+          0.2,
+          0.3,
+          0.4
+        ],
+        "intercept": 0.0
+      },
+      "feature_names": [
+        "confidence",
+        "algorithm",
+        "severity",
+        "crypto_type",
+        "language",
+        "rule_id",
+        "line",
+        "file_extension"
+      ],
+      "classes": null
+    },
     "rule_id_encoder": {
       "type": "linear_regression",
       "parameters": {
@@ -174,31 +198,7 @@
       ],
       "classes": null
     },
-    "crypto_type_encoder": {
-      "type": "linear_regression",
-      "parameters": {
-        "threshold": 0.5,
-        "weights": [
-          0.1,
-          0.2,
-          0.3,
-          0.4
-        ],
-        "intercept": 0.0
-      },
-      "feature_names": [
-        "confidence",
-        "algorithm",
-        "severity",
-        "crypto_type",
-        "language",
-        "rule_id",
-        "line",
-        "file_extension"
-      ],
-      "classes": null
-    },
-    "file_extension_encoder": {
+    "algorithm_encoder": {
       "type": "linear_regression",
       "parameters": {
         "threshold": 0.5,
