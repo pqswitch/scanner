@@ -54,6 +54,12 @@ jobs:
         distribution: goreleaser
         version: '~> v2' 
         install-only: true
+
+    - name: Install Syft (for SBOM generation)
+      run: |
+        SYFT_VERSION=v1.30.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sudo sh -s -- -b /usr/local/bin ${SYFT_VERSION}
+        syft version
         
     - name: Generate version
       id: version
