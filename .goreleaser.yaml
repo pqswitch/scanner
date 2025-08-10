@@ -136,6 +136,9 @@ docker_manifests:
 sboms:
   - id: sbom-archives
     artifacts: archive
+    # Ensure syft is available on PATH during GoReleaser run
+    env:
+      - SYFT_FILE_METADATA_CATALOGER_ENABLED=true
 
 # Sign Docker images with Cosign
 docker_signs:
