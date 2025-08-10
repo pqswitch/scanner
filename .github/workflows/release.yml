@@ -96,6 +96,28 @@ jobs:
           echo "Docker credentials not available, skipping Docker builds"
           goreleaser release --clean --skip=docker
         fi
+
+    - name: Generate image SBOMs (post-push)
+      if: steps.docker-creds.outputs.available == 'true'
+      run: |
+        echo "Generating CycloneDX SBOMs for pushed images..."
+        echo "Note: GoReleaser cannot catalog docker artifacts during sbom step; generating SBOMs after push."
+        SYFT_VERSION=v1.7.0
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b . ${SYFT_VERSION}
+        # Generate SBOMs for version and latest tags if present
+        if [ -n "${{ steps.version.outputs.version }}" ]; then
+          ./syft pqswitch/scanner:${{ steps.version.outputs.version }} -o cyclonedx-json > image-${{ steps.version.outputs.version }}.sbom.json || true
+        fi
+        ./syft pqswitch/scanner:latest -o cyclonedx-json > image-latest.sbom.json || true
+    
+    - name: Upload image SBOMs
+      if: steps.docker-creds.outputs.available == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: image-sboms
+        path: |
+          image-*.sbom.json
+      continue-on-error: true
       
     - name: Upload release summary
       if: success()
